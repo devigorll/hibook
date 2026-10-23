@@ -1,70 +1,55 @@
 # 📚 HiBook
 
-<div align="center">
+> Uma aplicação web moderna e minimalista para a gestão de bibliotecas pessoais, inspirada no design fluido e visual do Pinterest.
 
-[![Status do Projeto](https://img.shields.io/badge/Status-Em_Desenvolvimento-orange?style=for-the-badge&logo=codeforces)](https://github.com/)
-[![Tecnologia](https://img.shields.io/badge/Stack-Pure_Code_%2F_Vanilla-blue?style=for-the-badge&logo=javascript)](https://github.com/)
-[![Hospedagem](https://img.shields.io/badge/Hospedagem-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/)
-[![Banco de Dados](https://img.shields.io/badge/Database-Supabase_%28PostgreSQL%29-green?style=for-the-badge&logo=supabase)](https://supabase.com/)
+🔗 **Acesse a aplicação online:** [hibook.vercel.app](https://hibook.vercel.app)
 
-</div>
+> ⚠️ **Aviso Importante / Project Status:**
+> O **HiBook** encontra-se atualmente em **fase de testes e desenvolvimento ativo**. Por se tratar de um projeto em constante evolução, o repositório passará por frequentes refatorações e ajustes, incluindo a **reorganização da arquitetura de pastas, padronização e otimização da estrutura de código, além do aprimoramento no gerenciamento de chaves sigilosas e variáveis de ambiente (env)**.
 
 ---
 
 ## 🚀 Sobre o Projeto
 
-O **HiBook** é uma aplicação web moderna voltada para a gestão de bibliotecas pessoais. O projeto foi desenvolvido inteiramente com **código puro (Pure Code / Vanilla JavaScript, HTML e CSS)**, sem o uso de frameworks pesados de interface, focando em uma arquitetura limpa, modular e altamente performática. 
+O **HiBook** foi desenvolvido para proporcionar uma experiência imersiva e organizada na catalogação de leituras. Com uma interface inspirada no feed do Pinterest, o sistema permite que o usuário gerencie sua estante pessoal de forma prática, acompanhando títulos, autores, capas e status de leitura. 
 
-Atualmente, o projeto encontra-se **em desenvolvimento ativo**, com foco na experiência do usuário e na integração robusta com serviços em nuvem.
-
----
-
-## ⚙️ Funcionalidades
-
-* **Autenticação de Usuários:** Sistema de cadastro e login seguro para gerenciar sessões individuais.
-* **Gerenciamento de Livros (CRUD completo):**
-  * **Inserir:** Adicione novos livros à sua biblioteca digital informando detalhes relevantes.
-  * **Visualizar:** Navegue pela galeria ou lista de livros cadastrados com uma interface intuitiva.
-  * **Editar:** Atualize informações e dados dos livros conforme necessário.
-* **Organização por Listas:** Organize suas leituras de forma personalizada.
+O projeto foca em alta performance e leveza, construído totalmente sem frameworks pesados de frontend, priorizando a modularidade e o domínio de tecnologias nativas.
 
 ---
 
-## 🛠️ Tecnologias e Arquitetura
+## 🛠️ Tecnologias Utilizadas
 
-O projeto foi construído utilizando as seguintes tecnologias:
+Este projeto foi construído utilizando as seguintes tecnologias e ferramentas:
 
-* **Front-end:** 
-  * HTML5 / CSS3 (com arquivos modulares de estilos: `variables`, `layout`, `components`, `global`)
-  * JavaScript Moderno (Modularizado em *Services*, *Views* e *Config*)
-* **Back-end & Banco de Dados:** 
-  * **Supabase** (utilizando **PostgreSQL** para persistência de dados e segurança com políticas de acesso)
-* **Hospedagem e Deploy:** 
-  * **Vercel** (preparado para implantação contínua e rápida)
+* **Frontend:** 
+  * `HTML5` & `CSS3` (Estilização customizada e responsiva)
+  * `Vanilla JavaScript` (ES6+ modular)
+  * `Lucide Icons` (Ícones minimalistas)
+* **Backend & Banco de Dados:** 
+  * `Supabase` (Backend-as-a-Service)
+  * `PostgreSQL` (Modelagem relacional e persistência de dados)
+* **Hospedagem & Deploy:**
+  * `Vercel` (Deploy contínuo e alta disponibilidade)
 
 ---
 
-## 📁 Estrutura de Diretórios
+## ✨ Funcionalidades
 
-A estrutura do projeto foi organizada de forma modular para facilitar a manutenção e escalabilidade:
+* **Autenticação de Usuários:** Sistema seguro de cadastro e login integrado ao Supabase Auth.
+* **CRUD Completo de Livros:** Adicione novos livros, edite informações, altere o status de leitura e remova itens da sua estante.
+* **Interface Estilo Pinterest:** Visualização em cartões (cards) fluídos e responsivos para melhor apreciação das capas e detalhes das obras.
+* **Filtros e Organização:** Ferramentas para navegar facilmente pela sua biblioteca pessoal.
+
+---
+
+## 📁 Estrutura de Diretórios (Em Refatoração)
 
 ```text
 hibook/
-├── public/
-│   ├── css/
-│   │   ├── components.css
-│   │   ├── global.css
-│   │   ├── layout.css
-│   │   └── variables.css
-│   ├── js/
-│   │   ├── config/
-│   │   │   └── supabase.js
-│   │   ├── services/
-│   │   │   (auth_service.js, book_service.js, list_service.js)
-│   │   └── views/
-│   │       (auth_view.js, form_view.js, gallery_view.js, modal_view.js)
-│   ├── app.js
-│   └── index.html
-├── .gitignore
-├── package.json
-└── README.md
+├── src/
+│   ├── assets/       # Imagens e recursos visuais
+│   ├── css/          # Folhas de estilo modulares
+│   ├── js/           # Scripts divididos por responsabilidade (API, UI, Auth)
+│   └── views/        # Componentes e páginas da aplicação
+├── index.html        # Ponto de entrada principal
+└── README.md         # Documentação do projeto
