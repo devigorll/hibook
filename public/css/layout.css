@@ -1,0 +1,373 @@
+
+/* ========================================
+   LAYOUT GERAL
+======================================== */
+
+#app {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: clip;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* ========================================
+   SIDEBAR
+======================================== */
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+
+  display: flex;
+  flex-direction: column;
+
+  width: 260px;
+  height: 100vh;
+  padding: 24px 16px;
+
+  background-color: var(--bg-sidebar, #101014);
+  border-right: 1px solid var(--border-color, #27272a);
+
+  overflow-x: hidden;
+  overflow-y: auto;
+
+  transition:
+    width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    padding 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Sidebar recolhida no desktop */
+.sidebar.collapsed {
+  width: 72px;
+  padding: 24px 10px;
+}
+
+/* ========================================
+   MARCA / LOGOTIPO
+======================================== */
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  min-height: 32px;
+  margin-bottom: 32px;
+  padding-left: 8px;
+
+  color: var(--accent-color, #f4f4f5);
+  font-size: 1.35rem;
+  font-weight: 700;
+
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidebar-brand > i {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+}
+
+/* ========================================
+   MENUS
+======================================== */
+
+.sidebar-menu,
+.sidebar-lists-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+
+  border-radius: 8px;
+
+  color: #a1a1aa;
+  font-size: 0.95rem;
+  font-weight: 500;
+
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    padding 0.3s ease,
+    gap 0.3s ease;
+}
+
+.menu-item > i {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.menu-text,
+.brand-text {
+  display: inline-block;
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  opacity: 1;
+  transition:
+    opacity 0.15s ease,
+    max-width 0.3s ease;
+}
+
+.menu-item:hover {
+  background-color: #27272a;
+  color: #f4f4f5;
+}
+
+.menu-item.active {
+  background-color: #27272a;
+  color: #f4f4f5;
+  font-weight: 600;
+}
+
+/* Título da seção de listas */
+.menu-section-title {
+  max-height: 60px;
+  margin: 0;
+  padding: 20px 12px 8px;
+
+  color: #71717a;
+  font-size: 0.725rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  white-space: nowrap;
+  overflow: hidden;
+
+  opacity: 1;
+  transition:
+    opacity 0.15s ease,
+    max-height 0.3s ease,
+    padding 0.3s ease;
+}
+
+/* ========================================
+   SIDEBAR RECOLHIDA
+======================================== */
+
+.sidebar.collapsed .sidebar-brand {
+  justify-content: center;
+  gap: 0;
+  padding-left: 0;
+}
+
+.sidebar.collapsed .brand-text,
+.sidebar.collapsed .menu-text {
+  max-width: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sidebar.collapsed .menu-section-title {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  opacity: 0;
+}
+
+.sidebar.collapsed .menu-item {
+  justify-content: center;
+  gap: 0;
+  padding-right: 0;
+  padding-left: 0;
+}
+
+/* ========================================
+   CONTEÚDO PRINCIPAL
+======================================== */
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+  width: calc(100% - 260px);
+  margin-left: 260px;
+  padding: 32px 40px;
+
+  transition:
+    margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.main-content.expanded {
+  width: calc(100% - 72px);
+  margin-left: 72px;
+}
+
+/* ========================================
+   CABEÇALHO
+======================================== */
+
+.main-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+
+  margin-bottom: 32px;
+}
+
+.header-title-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  min-width: 0;
+}
+
+.main-header h2 {
+  margin: 0;
+  color: #f4f4f5;
+  font-size: 1.75rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+/* Botão do menu */
+#toggle-sidebar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  cursor: pointer;
+}
+
+/* ========================================
+   FORMULÁRIOS E ESTADOS
+======================================== */
+
+#content-area {
+  min-width: 0;
+  width: 100%;
+}
+
+.form-message {
+  margin-top: 16px;
+}
+
+.success-text {
+  color: #16a34a;
+}
+
+.error-text {
+  color: #dc2626;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ========================================
+   RESPONSIVIDADE: CELULAR
+======================================== */
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 260px;
+    padding: 24px 16px;
+
+    transform: translateX(-100%);
+    visibility: hidden;
+
+    box-shadow: 12px 0 30px rgb(0 0 0 / 20%);
+  }
+
+  /* Sidebar aberta no celular */
+  .sidebar.mobile-open {
+    width: 260px;
+    padding: 24px 16px;
+
+    transform: translateX(0);
+    visibility: visible;
+  }
+
+  /* No celular, não aplicamos o modo recolhido do desktop */
+  .sidebar.mobile-open.collapsed {
+    width: 260px;
+    padding: 24px 16px;
+  }
+
+  .sidebar.mobile-open .brand-text,
+  .sidebar.mobile-open .menu-text {
+    max-width: 190px;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .sidebar.mobile-open .menu-section-title {
+    max-height: 60px;
+    padding: 20px 12px 8px;
+    opacity: 1;
+  }
+
+  .sidebar.mobile-open .menu-item {
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 10px 12px;
+  }
+
+  .sidebar.mobile-open .sidebar-brand {
+    justify-content: flex-start;
+    gap: 12px;
+    padding-left: 8px;
+  }
+
+  .main-content,
+  .main-content.expanded {
+    width: 100%;
+    margin-left: 0;
+    padding: 20px 16px;
+  }
+
+  .main-header {
+    margin-bottom: 24px;
+  }
+
+  .main-header h2 {
+    font-size: 1.4rem;
+  }
+}
+
+/* Respeita a preferência por menos movimento */
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .main-content,
+  .menu-item,
+  .menu-text,
+  .brand-text,
+  .menu-section-title {
+    transition: none;
+  }
+}

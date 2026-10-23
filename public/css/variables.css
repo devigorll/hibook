@@ -1,0 +1,37 @@
+:root {
+  /* Fundo Principal: Preto profundo e refinado */
+  --bg-primary: #0a0a0c;
+  --bg-secondary: #121216;
+  --card-bg: #18181d;
+  
+  /* Menu Lateral: Cinza escuro elegante para diferenciar sutilmente do fundo */
+  --bg-sidebar: #101014;
+  
+  /* Textos: Branco acinzentado suave (Off-White) para não ofuscar e evitar cansaço visual */
+  --text-primary: #e4e4e7;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  
+  /* Cores de Destaque (Accent): Branco neutro suave e cinza claro refinado */
+  --accent-color: #f4f4f5;
+  --accent-hover: #ffffff;
+  
+  /* Cores específicas para botões de ação primária no tema monocromático */
+  --btn-primary-bg: #f4f4f5;
+  --btn-primary-text: #0a0a0c;
+  --btn-primary-hover: #ffffff;
+  
+  /* Bordas e Divisores */
+  --border-color: #27272a;
+  --sidebar-border: #27272a;
+  
+  /* Sombras minimalistas */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.7);
+  
+  /* Arredondamento e Transições */
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --transition: all 0.25s ease-in-out;
+}

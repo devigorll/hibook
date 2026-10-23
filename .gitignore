@@ -1,0 +1,13 @@
+# Ficheiros do sistema e do editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Node modules (se instalares bibliotecas locais)
+node_modules/
+npm-debug.log
+
+# Ambientes e credenciais sensíveis
+.env
+.env.local

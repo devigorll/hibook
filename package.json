@@ -1,0 +1,12 @@
+{
+  "name": "hibook",
+  "version": "1.0.0",
+  "description": "HiBook — Galeria visual de livros inspirada no Pinterest",
+  "main": "public/app.js",
+  "scripts": {
+    "start": "npx serve public"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta
+    name="description"
+    content="HiBook: organize sua biblioteca de livros e crie listas personalizadas."
+  >
+
+
+
+
+
+
+
+
+
+
+<script>
+  function mostrarErroNaTela(texto) {
+    var alvo = document.getElementById('content-area') || document.body;
+    alvo.innerHTML =
+      '<pre style="color:#f87171;white-space:pre-wrap;padding:16px">' +
+      'ERRO DETECTADO:\n\n' + texto + '</pre>';
+  }
+
+  // O "true" faz capturar também scripts que não conseguiram carregar (404, bloqueio).
+  window.addEventListener('error', function (e) {
+    if (e.target && e.target.tagName === 'SCRIPT') {
+      mostrarErroNaTela('Não foi possível carregar o script:\n' + e.target.src);
+    } else {
+      mostrarErroNaTela(e.message + '\n' + (e.filename || '') + ':' + (e.lineno || ''));
+    }
+  }, true);
+
+  window.addEventListener('unhandledrejection', function (e) {
+    mostrarErroNaTela(String(e.reason && e.reason.message ? e.reason.message : e.reason));
+  });
+</script>
+
+
+
+
+
+
+
+
+
+
+
+  <title>HiBook — Galeria Visual de Livros</title>
+
+  <link rel="stylesheet" href="./css/variables.css">
+  <link rel="stylesheet" href="./css/global.css">
+  <link rel="stylesheet" href="./css/layout.css">
+  <link rel="stylesheet" href="./css/components.css">
+
+  <!-- Ícones (versão fixa para o projeto não quebrar em atualizações) -->
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js" defer></script>
+  <script type="module" src="./app.js"></script>
+</head>
+
+<body>
+  <div id="app">
+
+    <!-- Menu lateral -->
+    <aside class="sidebar" id="sidebar" aria-label="Menu principal">
+      <div class="sidebar-brand">
+        <i data-lucide="book-open-check" aria-hidden="true"></i>
+        <span class="brand-text">HiBook</span>
+      </div>
+
+      <nav aria-label="Navegação da biblioteca">
+        <ul class="sidebar-menu">
+
+          <li class="menu-item active" data-view="gallery" tabindex="0" role="button" aria-current="page">
+            <i data-lucide="layout-grid" aria-hidden="true"></i>
+            <span class="menu-text">Início</span>
+          </li>
+
+          <li class="menu-item" data-view="create-book" tabindex="0" role="button">
+            <i data-lucide="plus-circle" aria-hidden="true"></i>
+            <span class="menu-text">Criar Livro</span>
+          </li>
+
+          <li class="menu-item" data-view="create-list" tabindex="0" role="button">
+            <i data-lucide="folder-plus" aria-hidden="true"></i>
+            <span class="menu-text">Criar Lista</span>
+          </li>
+
+        </ul>
+      </nav>
+
+      <div class="menu-section-title">Minhas Listas</div>
+
+      <ul class="sidebar-lists-container" id="sidebar-lists" aria-label="Minhas listas">
+        <!-- Listas carregadas pelo JavaScript -->
+      </ul>
+
+      <!-- Rodapé: aparece somente com o usuário logado -->
+      <div class="sidebar-footer" id="sidebar-footer" hidden>
+        <button type="button" class="menu-item" id="logout-btn">
+          <i data-lucide="log-out" aria-hidden="true"></i>
+          <span class="menu-text">Sair</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Conteúdo principal -->
+    <main class="main-content" id="main-content">
+
+      <header class="main-header">
+        <div class="header-title-container">
+
+          <button
+            id="toggle-sidebar-btn"
+            class="icon-btn"
+            type="button"
+            aria-label="Abrir ou fechar menu"
+            aria-controls="sidebar"
+            aria-expanded="true"
+          >
+            <i data-lucide="menu" aria-hidden="true"></i>
+          </button>
+
+          <h2 id="page-title">Biblioteca Geral</h2>
+
+        </div>
+      </header>
+
+      <section id="content-area" aria-live="polite">
+        <div class="empty-state">
+          <i data-lucide="book-open" aria-hidden="true"></i>
+          <h3>Carregando...</h3>
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+</body>
+</html>
