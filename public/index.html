@@ -3,54 +3,42 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#0a0a0c">
 
   <meta
     name="description"
     content="HiBook: organize sua biblioteca de livros e crie listas personalizadas."
   >
 
-
-
-
-
-
-
-
-
-
-<script>
-  function mostrarErroNaTela(texto) {
-    var alvo = document.getElementById('content-area') || document.body;
-    alvo.innerHTML =
-      '<pre style="color:#f87171;white-space:pre-wrap;padding:16px">' +
-      'ERRO DETECTADO:\n\n' + texto + '</pre>';
-  }
-
-  // O "true" faz capturar também scripts que não conseguiram carregar (404, bloqueio).
-  window.addEventListener('error', function (e) {
-    if (e.target && e.target.tagName === 'SCRIPT') {
-      mostrarErroNaTela('Não foi possível carregar o script:\n' + e.target.src);
-    } else {
-      mostrarErroNaTela(e.message + '\n' + (e.filename || '') + ':' + (e.lineno || ''));
-    }
-  }, true);
-
-  window.addEventListener('unhandledrejection', function (e) {
-    mostrarErroNaTela(String(e.reason && e.reason.message ? e.reason.message : e.reason));
-  });
-</script>
-
-
-
-
-
-
-
-
-
-
-
   <title>HiBook — Galeria Visual de Livros</title>
+
+  <!-- Aplica o tema ANTES da página ser desenhada, para não "piscar" entre claro e escuro.
+       Mesma regra do js/services/theme_service.js: escolha salva > tema do sistema. -->
+  <script>
+    (function () {
+      var tema = null;
+
+      try {
+        tema = localStorage.getItem('hibook-theme');
+      } catch (erro) {
+        tema = null;
+      }
+
+      if (tema !== 'light' && tema !== 'dark') {
+        var claro = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+        tema = claro ? 'light' : 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', tema);
+
+      var meta = document.querySelector('meta[name="theme-color"]');
+
+      if (meta) {
+        meta.setAttribute('content', tema === 'light' ? '#f6f6f7' : '#0a0a0c');
+      }
+    })();
+  </script>
 
   <link rel="stylesheet" href="./css/variables.css">
   <link rel="stylesheet" href="./css/global.css">
@@ -128,6 +116,9 @@
           <h2 id="page-title">Biblioteca Geral</h2>
 
         </div>
+
+        <!-- Ações do cabeçalho: o seletor de tema é inserido aqui pelo app.js -->
+        <div class="header-actions" id="header-actions"></div>
       </header>
 
       <section id="content-area" aria-live="polite">

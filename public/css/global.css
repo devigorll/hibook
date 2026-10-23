@@ -26,3 +26,19 @@ a {
   text-decoration: none;
   color: inherit;
 }
+
+/* Troca de tema suave: a classe é adicionada por js/services/theme_service.js por ~350 ms */
+@media (prefers-reduced-motion: no-preference) {
+  html.theme-switching,
+  html.theme-switching *,
+  html.theme-switching *::before,
+  html.theme-switching *::after {
+    transition:
+      background-color 0.25s ease,
+      border-color 0.25s ease,
+      color 0.25s ease,
+      fill 0.25s ease,
+      stroke 0.25s ease,
+      box-shadow 0.25s ease !important;
+  }
+}

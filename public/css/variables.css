@@ -1,37 +1,125 @@
+/* ==========================================================
+   TOKENS DE DESIGN
+   Tema escuro = padrão (:root). Tema claro = [data-theme="light"].
+   O atributo data-theme é definido em <html> pelo script do index.html
+   e pelo js/services/theme_service.js.
+   Para ajustar uma cor, altere SOMENTE este arquivo.
+========================================================== */
+
 :root {
-  /* Fundo Principal: Preto profundo e refinado */
-  --bg-primary: #0a0a0c;
+  color-scheme: dark; /* barras de rolagem e campos nativos acompanham o tema */
+
+  /* Fundos */
+  --bg-primary: #0a0a0c;     /* fundo da página */
   --bg-secondary: #121216;
-  --card-bg: #18181d;
-  
-  /* Menu Lateral: Cinza escuro elegante para diferenciar sutilmente do fundo */
-  --bg-sidebar: #101014;
-  
-  /* Textos: Branco acinzentado suave (Off-White) para não ofuscar e evitar cansaço visual */
+  --card-bg: #18181d;        /* cartões, formulários, modais */
+  --bg-sidebar: #101014;     /* menu lateral */
+  --bg-inset: #0a0a0c;       /* campos de entrada, trilhas de barra, áreas rebaixadas */
+
+  /* Textos */
+  --text-strong: #f4f4f5;    /* títulos e itens em destaque */
   --text-primary: #e4e4e7;
   --text-secondary: #a1a1aa;
   --text-muted: #71717a;
-  
-  /* Cores de Destaque (Accent): Branco neutro suave e cinza claro refinado */
+
+  /* Destaque (accent) */
   --accent-color: #f4f4f5;
   --accent-hover: #ffffff;
-  
-  /* Cores específicas para botões de ação primária no tema monocromático */
+
+  /* Botão primário */
   --btn-primary-bg: #f4f4f5;
   --btn-primary-text: #0a0a0c;
   --btn-primary-hover: #ffffff;
-  
-  /* Bordas e Divisores */
-  --border-color: #27272a;
+
+  /* Bordas, divisores e superfícies interativas */
+  --border-color: #27272a;   /* divisores e bordas de cartões */
+  --border-input: #27272a;   /* bordas de campos e botões de contorno */
   --sidebar-border: #27272a;
-  
-  /* Sombras minimalistas */
+  --surface-hover: #27272a;  /* hover de itens e botões */
+  --surface-active: #27272a; /* item selecionado no menu */
+  --focus-ring: rgba(244, 244, 245, 0.14);
+
+  /* Estados e feedback */
+  --success-text: #34d399;
+  --danger-text: #f87171;
+  --danger-bg: #dc2626;
+  --danger-bg-hover: #b91c1c;
+  --danger-on: #ffffff;
+  --danger-border: rgba(248, 113, 113, 0.4);
+  --danger-soft: rgba(248, 113, 113, 0.12);
+
+  /* Avaliação e progresso */
+  --star-color: #fbbf24;
+  --progress-from: #71717a;
+  --progress-to: #f4f4f5;
+  --progress-done-from: #34d399;
+  --progress-done-to: #6ee7b7;
+
+  /* Sombras e camadas */
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.5);
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.7);
-  
-  /* Arredondamento e Transições */
+  --shadow-sidebar: 12px 0 30px rgba(0, 0, 0, 0.2);
+  --backdrop: rgba(0, 0, 0, 0.65); /* fundo atrás dos modais */
+
+  /* Sobre imagens (iguais nos dois temas: ficam sobre a capa do livro) */
+  --image-scrim: rgba(0, 0, 0, 0.5);
+  --image-bar-track: rgba(0, 0, 0, 0.55);
+  --image-bar-fill: #ffffff;
+
+  /* Arredondamento e transições (não mudam com o tema) */
   --radius-sm: 8px;
   --radius-md: 16px;
   --radius-lg: 24px;
   --transition: all 0.25s ease-in-out;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  /* Fundos: branco e cinzas suaves, com os cartões "acima" da página */
+  --bg-primary: #f6f6f7;
+  --bg-secondary: #ececee;
+  --card-bg: #ffffff;
+  --bg-sidebar: #ffffff;
+  --bg-inset: #f1f1f3;
+
+  /* Textos (contraste verificado, veja a documentação da entrega) */
+  --text-strong: #09090b;
+  --text-primary: #18181b;
+  --text-secondary: #52525b;
+  --text-muted: #62626b;
+
+  /* Destaque: o branco do tema escuro vira grafite, mantendo o estilo monocromático */
+  --accent-color: #18181b;
+  --accent-hover: #000000;
+
+  --btn-primary-bg: #18181b;
+  --btn-primary-text: #fafafa;
+  --btn-primary-hover: #3f3f46;
+
+  --border-color: #e4e4e7;
+  --border-input: #8f8f99;   /* contraste mínimo de 3:1 para campos e controles */
+  --sidebar-border: #e4e4e7;
+  --surface-hover: #f0f0f2;
+  --surface-active: #e8e8eb;
+  --focus-ring: rgba(24, 24, 27, 0.14);
+
+  --success-text: #15803d;
+  --danger-text: #b91c1c;
+  --danger-bg: #dc2626;
+  --danger-bg-hover: #b91c1c;
+  --danger-on: #ffffff;
+  --danger-border: rgba(185, 28, 28, 0.35);
+  --danger-soft: rgba(185, 28, 28, 0.08);
+
+  --star-color: #d97706;
+  --progress-from: #a1a1aa;
+  --progress-to: #18181b;
+  --progress-done-from: #34d399;
+  --progress-done-to: #059669;
+
+  --shadow-sm: 0 1px 3px rgba(24, 24, 27, 0.08), 0 1px 2px rgba(24, 24, 27, 0.06);
+  --shadow-md: 0 10px 30px rgba(24, 24, 27, 0.14), 0 2px 6px rgba(24, 24, 27, 0.08);
+  --shadow-sidebar: 12px 0 30px rgba(24, 24, 27, 0.12);
+  --backdrop: rgba(24, 24, 27, 0.45);
 }

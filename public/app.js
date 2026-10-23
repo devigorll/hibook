@@ -765,6 +765,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  // Seletor de tema: usa só arquivos locais (sem rede), então aparece
+  // mesmo se o Supabase demorar ou falhar.
+  async function montarSeletorDeTema() {
+    const destino = document.getElementById('header-actions');
+    const themeView = await carregarModulo('./js/views/theme_view.js', 'themeView');
+
+    if (destino && themeView) {
+      destino.appendChild(themeView.createSwitch());
+    }
+  }
+
+  montarSeletorDeTema();
+
   [listService, bookService, authService, formView, authView, modalView, galleryView, bookDetailsView] =
     await Promise.all([
       carregarModulo('./js/services/list_service.js', 'listService'),
