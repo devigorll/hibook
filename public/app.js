@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let modalView = null;
   let galleryView = null;
   let bookDetailsView = null;
+  let noteService = null;
   let modulosProntos = false;
 
   // Estado da aplicação.
@@ -369,6 +370,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       listNames: nomesDasListas,
       onRate: (livro, nota) => bookService.setRating(livro.id, nota),
       onSaveProgress: (livro, pagina) => bookService.setCurrentPage(livro, pagina),
+      // Anotações por página (nulo se o módulo não carregou: a janela abre sem essa seção).
+      notesApi: noteService
+        ? {
+            list: (livro) => noteService.getNotes(livro.id),
+            create: (livro, dados) => noteService.createNote(livro, dados),
+            update: (livro, nota, dados) => noteService.updateNote(livro, nota, dados),
+            remove: (nota) => noteService.deleteNote(nota.id)
+          }
+        : null,
+      confirmDelete: modalView ? (opcoes) => modalView.confirm(opcoes) : null,
       onEdit: showEditBook,
       onDelete: deleteBook,
       // Se a nota ou o progresso mudaram, a galeria é redesenhada com os dados novos.
@@ -846,10 +857,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  [listService, bookService, authService, formView, authView, modalView, galleryView, bookDetailsView] =
+  [listService, bookService, noteService, authService, formView, authView, modalView, galleryView, bookDetailsView] =
     await Promise.all([
       carregarModulo('./js/services/list_service.js', 'listService'),
       carregarModulo('./js/services/book_service.js', 'bookService'),
+      carregarModulo('./js/services/note_service.js', 'noteService'),
       carregarModulo('./js/services/auth_service.js', 'authService'),
       carregarModulo('./js/views/form_view.js', 'formView'),
       carregarModulo('./js/views/auth_view.js', 'authView'),

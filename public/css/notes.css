@@ -1,0 +1,218 @@
+/* ==========================================================
+   ANOTAÇÕES POR PÁGINA (dentro da janela de detalhes do livro)
+   Todas as cores vêm de variáveis (css/variables.css): funciona nos dois temas.
+========================================================== */
+
+/* A seção ocupa as duas colunas da janela de detalhes */
+.modal-card.book-details .notes-section {
+  grid-column: 1 / -1;
+}
+
+.notes-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.notes-header .btn {
+  padding: 8px 14px;
+  font-size: 0.85rem;
+}
+
+.notes-count {
+  margin-left: 4px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+/* Formulário (criar e editar) */
+.note-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background-color: var(--bg-inset);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+.note-form-title {
+  color: var(--text-strong);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.note-form-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 140px;
+  gap: 12px;
+}
+
+.note-form .input-group {
+  margin-bottom: 0;
+}
+
+/* Os campos ficam em destaque sobre o fundo rebaixado do formulário */
+.note-form .input-group input,
+.note-form .input-group textarea {
+  background-color: var(--card-bg);
+}
+
+.note-form .form-message {
+  min-height: 1.2em;
+  margin: 0;
+}
+
+.note-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Lista */
+.note-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.note-item {
+  padding: 14px 16px;
+  background-color: var(--bg-inset);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
+}
+
+.note-item.is-editing {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.note-item.is-busy {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.note-item-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+/* Etiqueta da página, para achar a anotação rapidamente */
+.note-page {
+  flex-shrink: 0;
+  padding: 2px 10px;
+  background-color: var(--btn-primary-bg);
+  border-radius: 999px;
+  color: var(--btn-primary-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.note-title {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--text-strong);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.note-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+.note-action {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.note-action:hover {
+  background-color: var(--surface-hover);
+  color: var(--text-strong);
+}
+
+.note-action.is-danger:hover {
+  background-color: var(--danger-soft);
+  color: var(--danger-text);
+}
+
+.note-action:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 1px;
+}
+
+.note-content {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Estados: vazio e carregando */
+.note-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 8px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.note-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.note-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border-input);
+  border-top-color: var(--accent-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite; /* "spin" já existe no components.css */
+}
+
+@media (max-width: 640px) {
+  .note-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .note-item-head {
+    flex-wrap: wrap;
+  }
+
+  .note-actions {
+    margin-left: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .note-spinner {
+    animation-duration: 3s;
+  }
+}

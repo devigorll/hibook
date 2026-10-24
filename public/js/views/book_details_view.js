@@ -9,7 +9,9 @@ import { progressView } from './progress_view.js';
 export const bookDetailsView = {
   // onRate(livro, nota) e onSaveProgress(livro, pagina) retornam o livro atualizado.
   // onClose({ changed }) é chamado ao fechar; changed = true se nota ou progresso mudaram.
-  open({ book, listNames = [], onRate, onSaveProgress, onEdit, onDelete, onClose }) {
+  // notesApi: { list(livro), create(livro, dados), update(livro, nota, dados), remove(nota) }
+  // confirmDelete(opcoes): confirmação usada ao excluir uma anotação
+  open({ book, listNames = [], onRate, onSaveProgress, notesApi, confirmDelete, onEdit, onDelete, onClose }) {
     const dialog = criarDialog();
 
     let alterado = false; // nota ou progresso mudaram
@@ -131,6 +133,28 @@ export const bookDetailsView = {
 
     info.insertBefore(secaoNota, feedback);
     info.insertBefore(progresso.element, feedback);
+
+    // ----- Anotações por página -----
+    // Carregada à parte: se o arquivo faltar, o resto da janela continua funcionando.
+    if (notesApi) {
+      import('./notes_view.js')
+        .then(({ notesView }) => {
+          // Cada chamada já leva o livro DESTA janela (anotações de um livro nunca aparecem em outro).
+          const notas = notesView.createSection({
+            book,
+            confirmDelete,
+            api: {
+              list: () => notesApi.list(book),
+              create: (dados) => notesApi.create(book, dados),
+              update: (nota, dados) => notesApi.update(book, nota, dados),
+              remove: (nota) => notesApi.remove(nota)
+            }
+          });
+
+          dialog.querySelector('.book-details').appendChild(notas.element);
+        })
+        .catch((error) => console.error('Não foi possível carregar as anotações:', error));
+    }
 
     // ----- Botões -----
     dialog.querySelector('[data-action="close"]').addEventListener('click', () => dialog.close());
