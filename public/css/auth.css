@@ -1,0 +1,367 @@
+/* ==========================================================
+   TELAS DE AUTENTICAÇÃO (login, cadastro, recuperação de senha)
+   Só atua quando <body> tem a classe "auth-mode".
+   Todas as cores vêm de variáveis (css/variables.css): funciona nos dois temas.
+========================================================== */
+
+/* ---------- Tela neutra de carregamento inicial ---------- */
+/* Evita mostrar o menu por um instante antes de saber se há alguém logado. */
+body.booting .sidebar,
+body.booting .main-header {
+  display: none;
+}
+
+body.booting .main-content,
+body.booting .main-content.expanded {
+  width: 100%;
+  margin-left: 0;
+}
+
+/* ---------- Modo autenticação: sem menu lateral e sem cabeçalho ---------- */
+body.auth-mode .sidebar,
+body.auth-mode .main-header {
+  display: none;
+}
+
+body.auth-mode .main-content,
+body.auth-mode .main-content.expanded {
+  width: 100%;
+  margin-left: 0;
+  padding: 0;
+}
+
+/* ---------- Composição ---------- */
+.auth-layout {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Painel da marca (esquerda) */
+.auth-brand {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 40px;
+  padding: 48px;
+  overflow: hidden;
+  background: linear-gradient(160deg, var(--card-bg) 0%, var(--bg-secondary) 100%);
+  border-right: 1px solid var(--border-color);
+}
+
+.auth-brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-strong);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.auth-brand-logo svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.auth-tagline {
+  max-width: 16ch;
+  margin-bottom: 24px;
+  color: var(--text-strong);
+  font-size: clamp(1.75rem, 3vw, 2.6rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.auth-features {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.auth-features li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.auth-features svg {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: var(--accent-color);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Mosaico decorativo (lembra a galeria masonry) */
+.auth-mosaic {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  align-items: end;
+  gap: 12px;
+  max-width: 360px;
+}
+
+.auth-tile {
+  display: block;
+  background-color: var(--bg-inset);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+}
+
+.auth-tile:nth-child(1) { height: 96px; }
+.auth-tile:nth-child(2) { height: 136px; background-color: var(--card-bg); }
+.auth-tile:nth-child(3) { height: 80px; }
+.auth-tile:nth-child(4) { height: 120px; background-color: var(--card-bg); }
+.auth-tile:nth-child(5) { height: 88px; }
+.auth-tile:nth-child(6) { height: 112px; }
+
+/* Painel do formulário (direita) */
+.auth-panel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px;
+}
+
+.auth-theme {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+.auth-card {
+  width: min(420px, 100%);
+  padding: 32px;
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.auth-title {
+  margin-bottom: 6px;
+  color: var(--text-strong);
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.auth-subtitle {
+  margin-bottom: 24px;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.auth-card .form-message {
+  min-height: 1.2em;
+  margin: 0 0 12px;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.auth-switch {
+  margin-top: 20px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.auth-back {
+  display: block;
+  margin: 16px auto 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* Linha do rótulo com o link "Esqueci minha senha" */
+.field-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.field-row .link-btn {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.field-row .link-btn:hover {
+  color: var(--text-strong);
+}
+
+/* Campo de senha com botão de mostrar/ocultar */
+.password-field {
+  position: relative;
+  display: flex;
+}
+
+.password-field input {
+  flex: 1;
+  min-width: 0;
+  padding-right: 48px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.password-toggle:hover {
+  color: var(--text-strong);
+}
+
+.password-toggle:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 1px;
+}
+
+.password-toggle svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Avisos (sucesso, erro, informação) */
+.auth-alert {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.auth-alert.is-success {
+  color: var(--success-text);
+  background-color: color-mix(in srgb, var(--success-text) 6%, transparent);
+  border-color: color-mix(in srgb, var(--success-text) 35%, transparent);
+}
+
+.auth-alert.is-error {
+  color: var(--danger-text);
+  background-color: var(--danger-soft);
+  border-color: var(--danger-border);
+}
+
+/* Estado de resultado (senha atualizada, link inválido) */
+.auth-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.auth-result-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 16px;
+  border-radius: 50%;
+  background-color: var(--bg-inset);
+  color: var(--success-text);
+}
+
+.auth-result-icon.is-error {
+  color: var(--danger-text);
+}
+
+.auth-result-icon svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.auth-result .auth-subtitle {
+  margin-bottom: 24px;
+}
+
+/* ---------- Celular e tablet ---------- */
+@media (max-width: 900px) {
+  .auth-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .auth-brand {
+    padding: 20px 24px;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .auth-brand-body,
+  .auth-mosaic {
+    display: none;
+  }
+
+  .auth-panel {
+    align-items: flex-start;
+    padding: 32px 16px 48px;
+  }
+
+  .auth-theme {
+    top: 12px;
+    right: 12px;
+  }
+
+  .auth-card {
+    padding: 24px 20px;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .auth-card {
+    animation: auth-in 0.4s ease both;
+  }
+
+  @keyframes auth-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}

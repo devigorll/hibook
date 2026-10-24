@@ -30,6 +30,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Estado da aplicação.
   let currentUser = null;
+
+  // Fluxo de recuperação de senha (link enviado por e-mail).
+  let recoveryMode = false;      // true enquanto o usuário define a nova senha
+  let recoveryExpected = false;  // a URL indica que a página foi aberta por um link de recuperação
+  let pendingLinkError = null;   // link inválido/expirado, mostrado na tela de login
+  let lastUserId;                // último usuário tratado (evita redesenhar a tela sem necessidade)
   let listsCache = [];       // listas do usuário, já carregadas
   let selectedListId = null; // lista aberta no momento (null = nenhuma)
   let lastView = { type: 'gallery' }; // para onde voltar após editar um livro
@@ -446,8 +452,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   // PARTE 4: TELAS E NAVEGAÇÃO
   // ========================================
 
-  function showAuth() {
+  // Telas de autenticação ocupam a tela toda: sem menu lateral e sem cabeçalho.
+  function setAuthMode(ativo) {
+    document.body.classList.toggle('auth-mode', ativo);
+    contentArea.setAttribute('aria-live', ativo ? 'off' : 'polite');
+  }
+
+  // Encerra a tela neutra de carregamento inicial (sem menu) quando já se sabe quem está logado.
+  function endBoot() {
+    document.body.classList.remove('booting');
+  }
+
+  // options: { mode, notice, linkError, onRecoveryFinished } (veja js/views/auth_view.js)
+  function showAuth(options = {}) {
     beginView();
+    setAuthMode(true);
     pageTitle.textContent = 'Entrar';
     setActiveMenu(null);
 
@@ -460,8 +479,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    authView.renderAuthForm(contentArea);
-    refreshIcons();
+    authView.renderAuthForm(contentArea, options);
   }
 
   // Galeria geral: todos os livros do usuário.
@@ -745,6 +763,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   function handleUserChange(user) {
     currentUser = user;
 
+    endBoot();
+    setAuthMode(!user);
+
     if (sidebarFooter) {
       sidebarFooter.hidden = !user;
     }
@@ -761,8 +782,35 @@ document.addEventListener('DOMContentLoaded', async () => {
       selectedListId = null;
       lastView = { type: 'gallery' };
       setSidebarMessage('Faça login para ver suas listas', 'lock');
-      showAuth();
+
+      // Se a página foi aberta por um link inválido/expirado, mostra o aviso uma única vez.
+      showAuth({ linkError: pendingLinkError });
+      pendingLinkError = null;
     }
+  }
+
+  // Link de recuperação aberto: mostra a tela de nova senha, sem entrar no app.
+  function startRecovery() {
+    currentUser = null;
+
+    endBoot();
+
+    if (sidebarFooter) {
+      sidebarFooter.hidden = true;
+    }
+
+    showAuth({
+      mode: 'reset',
+      onRecoveryFinished: ({ updated }) => {
+        recoveryMode = false;
+        lastUserId = null; // a sessão temporária foi encerrada: o próximo login deve ser tratado
+
+        showAuth({
+          mode: 'login',
+          notice: updated ? 'Senha atualizada com sucesso. Entre com a nova senha.' : null
+        });
+      }
+    });
   }
 
   // Seletor de tema: usa só arquivos locais (sem rede), então aparece
@@ -777,6 +825,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   montarSeletorDeTema();
+
+  // Descobre (antes de o Supabase carregar e limpar a URL) se a página foi aberta
+  // por um link de recuperação de senha ou por um link inválido/expirado.
+  const lerRedirect = await carregarModulo('./js/services/auth_redirect.js', 'readAuthRedirect');
+  const limparErroDaUrl = await carregarModulo('./js/services/auth_redirect.js', 'clearAuthErrorFromUrl');
+  const decidirEventoDeAuth = await carregarModulo('./js/services/auth_redirect.js', 'decideAuthEvent');
+  const redirect = lerRedirect ? lerRedirect() : { isRecovery: false, hasError: false };
+
+  if (redirect.isRecovery) {
+    recoveryExpected = true;
+  }
+
+  if (redirect.hasError) {
+    pendingLinkError = { code: redirect.errorCode, description: redirect.errorDescription };
+
+    // O link com erro não traz sessão: dá para limpar a URL para o aviso não voltar ao atualizar.
+    if (typeof limparErroDaUrl === 'function') {
+      limparErroDaUrl();
+    }
+  }
 
   [listService, bookService, authService, formView, authView, modalView, galleryView, bookDetailsView] =
     await Promise.all([
@@ -794,6 +862,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   console.log('[HiBook] módulos carregados', { falhas });
 
   if (!authService) {
+    endBoot();
+    setAuthMode(false);
     setSidebarMessage('Erro de conexão', 'alert-circle');
     showMessage(
       'alert-circle',
@@ -803,19 +873,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  let lastUserId;
+  authService.onAuthChange((user, evento) => {
+    // A regra de decisão fica em js/services/auth_redirect.js (testada à parte).
+    // Sem ela, cai no comportamento simples: tratar todo evento novo de usuário.
+    const decisao = decidirEventoDeAuth
+      ? decidirEventoDeAuth({ recoveryExpected, recoveryMode, lastUserId }, user, evento)
+      : { action: 'handle', state: { recoveryExpected, recoveryMode, lastUserId: user?.id ?? null } };
 
-  authService.onAuthChange((user) => {
-    const userId = user?.id ?? null;
-
-    // Ignora eventos repetidos (ex.: renovação de token).
-    if (userId === lastUserId) {
-      return;
-    }
-
-    lastUserId = userId;
+    ({ recoveryExpected, recoveryMode, lastUserId } = decisao.state);
 
     // setTimeout evita chamar o Supabase de dentro do callback de autenticação.
-    setTimeout(() => handleUserChange(user), 0);
+    if (decisao.action === 'start-recovery') {
+      setTimeout(startRecovery, 0);
+    } else if (decisao.action === 'handle') {
+      setTimeout(() => handleUserChange(user), 0);
+    }
   });
 });
