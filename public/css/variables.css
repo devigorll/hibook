@@ -4,6 +4,13 @@
    O atributo data-theme é definido em <html> pelo script do index.html
    e pelo js/services/theme_service.js.
    Para ajustar uma cor, altere SOMENTE este arquivo.
+
+   BREAKPOINTS do projeto (media queries não aceitam variáveis; use estes valores):
+     480px   celular pequeno (galeria compacta, botões em largura total)
+     768px   celular e tablet em pé (menu vira gaveta, janelas viram tela cheia)
+     900px   composição em duas colunas da tela de login
+     1440px  telas grandes (galeria com colunas mais largas)
+   Telas de toque (pointer: coarse) ganham alvos de pelo menos --touch-target.
 ========================================================== */
 
 :root {
@@ -65,6 +72,22 @@
   --image-scrim: rgba(0, 0, 0, 0.5);
   --image-bar-track: rgba(0, 0, 0, 0.55);
   --image-bar-fill: #ffffff;
+
+  /* Escala de espaçamento e de tipografia (nas regras novas; as antigas migram aos poucos) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.85rem;
+  --fs-md: 1rem;
+  --fs-lg: 1.25rem;
+  --fs-xl: 1.5rem;
+  --fs-2xl: clamp(1.5rem, 1.1rem + 1.6vw, 2rem);
+  --touch-target: 44px; /* tamanho mínimo de botões e controles em telas de toque */
 
   /* Arredondamento e transições (não mudam com o tema) */
   --radius-sm: 8px;

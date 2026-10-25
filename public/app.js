@@ -78,12 +78,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       sidebar.classList.remove('collapsed');
       mainContent.classList.remove('expanded');
 
-      toggleSidebarBtn?.setAttribute(
-        'aria-expanded',
-        String(sidebar.classList.contains('mobile-open'))
-      );
+      const aberto = sidebar.classList.contains('mobile-open');
+
+      toggleSidebarBtn?.setAttribute('aria-expanded', String(aberto));
+
+      // Com o menu aberto no celular, a página de trás não rola
+      document.body.classList.toggle('sidebar-open', aberto);
     } else {
       sidebar.classList.remove('mobile-open');
+      document.body.classList.remove('sidebar-open');
 
       const isCollapsed = sidebar.classList.contains('collapsed');
       mainContent.classList.toggle('expanded', isCollapsed);
@@ -107,6 +110,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     updateSidebarState();
+  });
+
+  // Fechar o menu no celular: botão ✕, toque no fundo escuro ou tecla Esc.
+  function fecharMenuMobile() {
+    if (mobileQuery.matches && sidebar.classList.contains('mobile-open')) {
+      sidebar.classList.remove('mobile-open');
+      updateSidebarState();
+      toggleSidebarBtn?.focus();
+    }
+  }
+
+  document.getElementById('sidebar-backdrop')?.addEventListener('click', fecharMenuMobile);
+  document.getElementById('sidebar-close-btn')?.addEventListener('click', fecharMenuMobile);
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      fecharMenuMobile();
+    }
   });
 
   mobileQuery.addEventListener('change', () => {

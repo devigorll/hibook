@@ -149,6 +149,14 @@
   font-weight: 600;
 }
 
+.sidebar .sidebar-close {
+  display: none; /* só aparece no celular, com o menu aberto (vence o display do .icon-btn) */
+}
+
+.sidebar-backdrop {
+  display: none;
+}
+
 /* Título da seção de listas */
 .menu-section-title {
   max-height: 60px;
@@ -357,12 +365,60 @@
     padding: 20px 16px;
   }
 
+  /* Fundo escuro atrás do menu aberto: tocar nele fecha o menu */
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: var(--backdrop);
+    animation: fade-in 0.2s ease both;
+  }
+
+  body.sidebar-open .sidebar-backdrop {
+    display: block;
+  }
+
+  .sidebar.mobile-open .sidebar-close {
+    display: inline-flex;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  /* Cabeçalho fixo no topo: menu, título e tema sempre ao alcance do polegar */
   .main-header {
-    margin-bottom: 24px;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    margin: -20px -16px 20px;
+    padding: 10px 16px;
+    background-color: color-mix(in srgb, var(--bg-primary) 90%, transparent);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .header-title-container {
+    flex: 1;
+    gap: 8px;
   }
 
   .main-header h2 {
-    font-size: 1.4rem;
+    overflow: hidden;
+    font-size: 1.15rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Telas de toque: itens de menu confortáveis */
+@media (pointer: coarse) {
+  .menu-item {
+    min-height: 48px;
   }
 }
 

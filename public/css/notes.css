@@ -4,7 +4,7 @@
 ========================================================== */
 
 /* A seção ocupa as duas colunas da janela de detalhes */
-.modal-card.book-details .notes-section {
+.bd-scroll .notes-section {
   grid-column: 1 / -1;
 }
 
@@ -197,7 +197,7 @@
   animation: spin 1s linear infinite; /* "spin" já existe no components.css */
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .note-form-row {
     grid-template-columns: 1fr;
   }

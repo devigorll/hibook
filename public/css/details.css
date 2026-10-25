@@ -1,0 +1,347 @@
+/* ==========================================================
+   DETALHES DO LIVRO
+   Desktop: capa à esquerda (fica visível ao rolar) e informações à direita.
+   Celular e tablet em pé (até 768px): tela cheia, capa no topo,
+   barra de ações fixa embaixo (alcance do polegar).
+   Todas as cores vêm de variáveis (css/variables.css): funciona nos dois temas.
+========================================================== */
+
+.modal.modal--wide {
+  --modal-width: 960px;
+}
+
+.modal-card.book-details {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  max-height: calc(100dvh - 48px);
+  overflow: hidden;
+}
+
+/* Botão de fechar sempre visível no canto */
+.bd-close {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  background-color: color-mix(in srgb, var(--card-bg) 85%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.bd-close:hover {
+  background-color: var(--surface-hover);
+  color: var(--text-strong);
+}
+
+.bd-close svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Área que rola: capa + informações (+ anotações, que ocupam as duas colunas) */
+.bd-scroll {
+  display: grid;
+  grid-template-columns: minmax(200px, 280px) minmax(0, 1fr);
+  column-gap: var(--space-7);
+  row-gap: var(--space-6);
+  align-items: start;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: var(--space-6);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* ---------- Capa ---------- */
+.bd-cover {
+  position: sticky;
+  top: 0;
+  align-self: start;
+}
+
+.bd-cover-frame {
+  overflow: hidden;
+  background-color: var(--bg-inset);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+/* Proporção original da capa (sem esticar nem cortar) */
+.bd-cover-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: min(70dvh, 560px);
+  object-fit: contain;
+}
+
+/* ---------- Informações ---------- */
+.bd-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.bd-heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-right: 52px; /* espaço para o botão de fechar */
+}
+
+.bd-title {
+  color: var(--text-strong);
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+/* Dados em etiquetas discretas: páginas e situação da leitura */
+.bd-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bd-fact {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  background-color: var(--bg-inset);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+}
+
+.bd-fact.is-active {
+  color: var(--text-strong);
+  border-color: var(--border-input);
+}
+
+.bd-fact.is-done {
+  color: var(--success-text);
+  background-color: color-mix(in srgb, var(--success-text) 10%, transparent);
+  border-color: color-mix(in srgb, var(--success-text) 35%, transparent);
+}
+
+/* Listas do livro */
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chip {
+  padding: 4px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* ---------- Descrição (leitura confortável) ---------- */
+.bd-about {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.book-description {
+  max-width: 65ch;
+  color: var(--text-secondary);
+  font-size: var(--fs-md);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Descrições longas começam recolhidas, com "Ver mais" */
+.book-description.is-clamped {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 6;
+  line-clamp: 6;
+  -webkit-box-orient: vertical;
+}
+
+.bd-about .link-btn {
+  padding-left: 0;
+  color: var(--text-strong);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+/* ---------- Seções (avaliação, progresso) ---------- */
+.section-title {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.bd-panels {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background-color: var(--bg-inset);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+/* Anotações não são um "cartão": ocupam a largura toda, separadas por uma linha */
+.bd-scroll .notes-section {
+  padding: var(--space-5) 0 0;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border-color);
+  border-radius: 0;
+}
+
+.bd-feedback {
+  min-height: 1.2em;
+  margin: 0;
+}
+
+/* ---------- Barra de ações (fixa embaixo) ---------- */
+.bd-actions {
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  background-color: var(--card-bg);
+  border-top: 1px solid var(--border-color);
+}
+
+.bd-actions .btn {
+  min-width: 128px;
+}
+
+/* ==================== Celular e tablet em pé (até 768px) ==================== */
+@media (max-width: 768px) {
+  /* A janela vira uma tela cheia */
+  .modal.modal--wide {
+    --modal-width: 100%;
+    width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+  }
+
+  .modal[open].modal--wide {
+    animation-name: sheet-in;
+  }
+
+  .modal-card.book-details {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .bd-close {
+    top: var(--space-3);
+    right: var(--space-3);
+  }
+
+  .bd-scroll {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--space-5);
+    padding: 64px var(--space-4) var(--space-5);
+  }
+
+  /* Capa centralizada, em tamanho confortável */
+  .bd-cover {
+    position: static;
+    justify-self: center;
+    width: min(56vw, 240px);
+  }
+
+  .bd-heading {
+    padding-right: 0;
+  }
+
+  .bd-actions {
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .bd-actions .btn {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+/* Tablet em pé (600 a 768px): continua em tela cheia, mas com capa e informações lado a lado */
+@media (min-width: 600px) and (max-width: 768px) {
+  .bd-scroll {
+    grid-template-columns: 200px minmax(0, 1fr);
+    column-gap: var(--space-5);
+    padding: 64px var(--space-5) var(--space-5);
+  }
+
+  .bd-cover {
+    position: sticky;
+    top: 0;
+    justify-self: stretch;
+    width: auto;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal[open],
+  .modal[open].modal--wide {
+    animation: none;
+  }
+}

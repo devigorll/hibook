@@ -339,9 +339,15 @@ body.auth-mode .main-content.expanded {
     padding: 32px 16px 48px;
   }
 
+  /* O seletor de tema fica na faixa da marca (no topo), nunca atrás do cartão */
+  .auth-panel {
+    position: static;
+  }
+
   .auth-theme {
     top: 12px;
     right: 12px;
+    z-index: 5;
   }
 
   .auth-card {
@@ -363,5 +369,18 @@ body.auth-mode .main-content.expanded {
       opacity: 1;
       transform: none;
     }
+  }
+}
+
+/* ---------- Telas de toque ---------- */
+@media (pointer: coarse) {
+  .password-toggle {
+    right: 2px;
+    width: var(--touch-target);
+    height: var(--touch-target);
+  }
+
+  .password-field input {
+    padding-right: 52px;
   }
 }

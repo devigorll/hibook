@@ -42,3 +42,32 @@ a {
       box-shadow 0.25s ease !important;
   }
 }
+
+/* ---------- Base de interação e acessibilidade ---------- */
+html {
+  -webkit-text-size-adjust: 100%; /* o iOS não "infla" o texto ao girar a tela */
+  text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Foco visível para teclado em qualquer controle (inputs têm o próprio destaque) */
+:where(a, button, [role="button"], [role="radio"], [tabindex]):focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+/* Sem atraso nem zoom de toque duplo nos controles */
+button,
+a,
+input,
+select,
+textarea,
+[role="button"] {
+  touch-action: manipulation;
+}
+
+/* Janela aberta ou menu aberto no celular: a página de trás não rola */
+body:has(dialog[open]),
+body.sidebar-open {
+  overflow: hidden;
+}
