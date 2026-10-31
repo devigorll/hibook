@@ -1,23 +1,25 @@
+import { setMessage, withBusyButton } from './ui_helpers.js';
+
 // Progresso de leitura: cálculo, barra horizontal e controle "Atualizar página atual".
 
 // Progresso (%) = (página atual / total de páginas) × 100
 // Sem total de páginas (ou total 0) não há como calcular: evita divisão por zero.
-export function calcularProgresso(paginaAtual, totalDePaginas) {
-  const atual = Math.max(Number(paginaAtual) || 0, 0);
-  const total = Number(totalDePaginas) || 0;
+export function calculateProgress(currentPage, totalPages) {
+  const current = Math.max(Number(currentPage) || 0, 0);
+  const total = Number(totalPages) || 0;
 
   if (total <= 0) {
-    return { temTotal: false, atual, total: 0, percentual: 0, fracao: 0 };
+    return { hasTotal: false, current, total: 0, percent: 0, fraction: 0 };
   }
 
-  const limitado = Math.min(atual, total);
+  const clamped = Math.min(current, total);
 
   return {
-    temTotal: true,
-    atual: limitado,
+    hasTotal: true,
+    current: clamped,
     total,
-    percentual: Math.round((limitado / total) * 100),
-    fracao: limitado / total
+    percent: Math.round((clamped / total) * 100),
+    fraction: clamped / total
   };
 }
 
@@ -54,93 +56,86 @@ export const progressView = {
       <p class="form-message" data-field="error" role="alert"></p>
     `;
 
-    const texto = section.querySelector('[data-field="text"]');
-    const percentual = section.querySelector('[data-field="percent"]');
-    const dica = section.querySelector('[data-field="hint"]');
-    const erro = section.querySelector('[data-field="error"]');
-    const barra = section.querySelector('.progress-bar');
-    const preenchimento = section.querySelector('.progress-fill');
+    const textElement = section.querySelector('[data-field="text"]');
+    const percent = section.querySelector('[data-field="percent"]');
+    const hint = section.querySelector('[data-field="hint"]');
+    const errorElement = section.querySelector('[data-field="error"]');
+    const progressBar = section.querySelector('.progress-bar');
+    const fill = section.querySelector('.progress-fill');
     const form = section.querySelector('form');
     const input = section.querySelector('input');
-    const botao = section.querySelector('button');
-    const rotulo = botao.querySelector('span');
+    const button = section.querySelector('button');
 
-    function mostrarErro(mensagem) {
-      erro.textContent = mensagem;
-      erro.className = mensagem ? 'form-message error-text' : 'form-message';
-    }
+    const showError = (text) => setMessage(errorElement, text, 'error');
 
     // Redesenha tudo a partir dos dados atuais do livro.
     function render() {
-      const progresso = calcularProgresso(book.current_page, book.pages_count);
+      const progress = calculateProgress(book.current_page, book.pages_count);
 
-      section.classList.toggle('is-complete', progresso.temTotal && progresso.percentual >= 100);
-      input.value = progresso.atual > 0 ? String(progresso.atual) : '';
+      section.classList.toggle('is-complete', progress.hasTotal && progress.percent >= 100);
+      input.value = progress.current > 0 ? String(progress.current) : '';
 
-      if (progresso.temTotal) {
-        texto.textContent = `Página ${progresso.atual} de ${progresso.total}`;
-        percentual.textContent = `${progresso.percentual}%`;
-        barra.setAttribute('aria-valuenow', String(progresso.percentual));
-        input.max = String(progresso.total);
-        dica.hidden = true;
+      if (progress.hasTotal) {
+        textElement.textContent = `Página ${progress.current} de ${progress.total}`;
+        percent.textContent = `${progress.percent}%`;
+        progressBar.setAttribute('aria-valuenow', String(progress.percent));
+        input.max = String(progress.total);
+        hint.hidden = true;
       } else {
-        texto.textContent = progresso.atual > 0 ? `Página ${progresso.atual}` : 'Leitura ainda não iniciada';
-        percentual.textContent = '—';
-        barra.removeAttribute('aria-valuenow');
+        textElement.textContent = progress.current > 0 ? `Página ${progress.current}` : 'Leitura ainda não iniciada';
+        percent.textContent = '—';
+        progressBar.removeAttribute('aria-valuenow');
         input.removeAttribute('max');
-        dica.textContent = 'Cadastre o total de páginas do livro (em Editar) para ver a porcentagem.';
-        dica.hidden = false;
+        hint.textContent = 'Cadastre o total de páginas do livro (em Editar) para ver a porcentagem.';
+        hint.hidden = false;
       }
 
       // Dois quadros de animação: garante que a barra "cresça" a partir do valor anterior.
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          preenchimento.style.width = `${progresso.fracao * 100}%`;
+          fill.style.width = `${progress.fraction * 100}%`;
         });
       });
     }
 
-    input.addEventListener('input', () => mostrarErro(''));
+    input.addEventListener('input', () => showError(''));
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
 
       // Evita envio duplicado.
-      if (botao.disabled) return;
+      if (button.disabled) return;
 
-      const bruto = input.value.trim();
-      const numero = Number(bruto);
+      const rawValue = input.value.trim();
+      const pageNumber = Number(rawValue);
 
-      if (bruto === '' || !Number.isInteger(numero) || numero < 0) {
-        mostrarErro('Informe um número de página válido (0 ou maior).');
+      if (rawValue === '' || !Number.isInteger(pageNumber) || pageNumber < 0) {
+        showError('Informe um número de página válido (0 ou maior).');
         input.focus();
         return;
       }
 
-      if (book.pages_count && numero > book.pages_count) {
-        mostrarErro(`A página atual não pode ser maior que o total de páginas (${book.pages_count}).`);
+      if (book.pages_count && pageNumber > book.pages_count) {
+        showError(`A página atual não pode ser maior que o total de páginas (${book.pages_count}).`);
         input.focus();
         return;
       }
 
-      botao.disabled = true;
-      rotulo.textContent = 'Salvando...';
-      mostrarErro('');
+      showError('');
 
       try {
-        await onSave(numero);
-        render();
+        await withBusyButton(button, 'Salvando...', async () => {
+          await onSave(pageNumber);
+          render();
+        });
       } catch (error) {
         console.error('Erro ao salvar o progresso:', error);
-        mostrarErro(error?.message || 'Não foi possível salvar o progresso.');
-      } finally {
-        botao.disabled = false;
-        rotulo.textContent = 'Atualizar página atual';
+        showError(error?.message || 'Não foi possível salvar o progresso.');
       }
     });
 
     render();
 
-    return { element: section, refresh: render };
+    return { element: section };
   }
 };

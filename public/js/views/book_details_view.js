@@ -2,30 +2,31 @@
 // Quem salva no banco são as funções recebidas (onRate, onSaveProgress, notesApi),
 // assim esta view só cuida da interface.
 
-import { criarDialog } from './modal_view.js';
+import { createDialog } from './modal_view.js';
 import { ratingView } from './rating_view.js';
-import { progressView, calcularProgresso } from './progress_view.js';
+import { progressView, calculateProgress } from './progress_view.js';
+import { setMessage } from './ui_helpers.js';
 
 const ICON_CLOSE =
   '<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
 
 // Descrições maiores que isto começam recolhidas (com "Ver mais").
-const LIMITE_DESCRICAO = 420;
+const DESCRIPTION_COLLAPSE_LIMIT = 420;
 
 // Situação da leitura, calculada com os dados que o livro já tem.
-function situacaoDaLeitura(book) {
-  const progresso = calcularProgresso(book.current_page, book.pages_count);
+function getReadingStatus(book) {
+  const progressInfo = calculateProgress(book.current_page, book.pages_count);
 
-  if (progresso.temTotal && progresso.atual >= progresso.total) {
-    return { texto: 'Concluído', classe: 'is-done' };
+  if (progressInfo.hasTotal && progressInfo.current >= progressInfo.total) {
+    return { text: 'Concluído', cssClass: 'is-done' };
   }
 
-  if (progresso.atual > 0) {
-    const texto = progresso.temTotal ? `Lendo · ${progresso.percentual}%` : `Lendo · pág. ${progresso.atual}`;
-    return { texto, classe: 'is-active' };
+  if (progressInfo.current > 0) {
+    const text = progressInfo.hasTotal ? `Lendo · ${progressInfo.percent}%` : `Lendo · pág. ${progressInfo.current}`;
+    return { text, cssClass: 'is-active' };
   }
 
-  return { texto: 'Não iniciado', classe: '' };
+  return { text: 'Não iniciado', cssClass: '' };
 }
 
 export const bookDetailsView = {
@@ -34,10 +35,10 @@ export const bookDetailsView = {
   // confirmDelete(opcoes): confirmação usada ao excluir uma anotação
   // onClose({ changed }) é chamado ao fechar; changed = true se nota ou progresso mudaram.
   open({ book, listNames = [], onRate, onSaveProgress, notesApi, confirmDelete, onEdit, onDelete, onClose }) {
-    const dialog = criarDialog();
+    const dialog = createDialog();
 
-    let alterado = false; // nota ou progresso mudaram
-    let saindo = false;   // fechando para abrir a edição (ela própria atualiza a tela depois)
+    let hasChanges = false; // nota ou progresso mudaram
+    let isLeaving = false;   // fechando para abrir a edição (ela própria atualiza a tela depois)
 
     // modal--wide: janela larga no desktop e tela cheia no celular
     dialog.classList.add('modal--wide');
@@ -87,147 +88,144 @@ export const bookDetailsView = {
 
     const area = dialog.querySelector('.bd-scroll');
     const feedback = dialog.querySelector('[data-field="feedback"]');
-    const fatos = dialog.querySelector('[data-field="facts"]');
+    const factsList = dialog.querySelector('[data-field="facts"]');
 
-    function mostrarFeedback(texto, tipo) {
-      feedback.textContent = texto;
-      feedback.className = `form-message bd-feedback ${tipo === 'erro' ? 'error-text' : 'success-text'}`;
-    }
+    const showFeedback = (text, tone) => setMessage(feedback, text, tone);
 
     // Etiquetas: páginas e situação da leitura (refeitas quando o progresso muda).
-    function desenharFatos() {
-      fatos.replaceChildren();
+    function renderFacts() {
+      factsList.replaceChildren();
 
       if (book.pages_count) {
-        const paginas = document.createElement('li');
-        paginas.className = 'bd-fact';
-        paginas.textContent = `${book.pages_count} ${book.pages_count === 1 ? 'página' : 'páginas'}`;
-        fatos.appendChild(paginas);
+        const pagesItem = document.createElement('li');
+        pagesItem.className = 'bd-fact';
+        pagesItem.textContent = `${book.pages_count} ${book.pages_count === 1 ? 'página' : 'páginas'}`;
+        factsList.appendChild(pagesItem);
       }
 
-      const situacao = situacaoDaLeitura(book);
-      const leitura = document.createElement('li');
-      leitura.className = `bd-fact ${situacao.classe}`.trim();
-      leitura.textContent = situacao.texto;
-      fatos.appendChild(leitura);
+      const status = getReadingStatus(book);
+      const readingItem = document.createElement('li');
+      readingItem.className = `bd-fact ${status.cssClass}`.trim();
+      readingItem.textContent = status.text;
+      factsList.appendChild(readingItem);
     }
 
-    // ----- Dados básicos (textContent: nada de HTML vindo do usuário) -----
+    // --- Dados básicos (textContent: nada de HTML vindo do usuário) ---
     const img = dialog.querySelector('.bd-cover img');
     img.src = book.cover_url;
     img.alt = `Capa do livro ${book.title}`;
 
     dialog.querySelector('.bd-title').textContent = book.title;
-    desenharFatos();
+    renderFacts();
 
     if (listNames.length > 0) {
-      const listas = dialog.querySelector('[data-field="lists"]');
+      const listsBox = dialog.querySelector('[data-field="lists"]');
 
-      listNames.forEach((nome) => {
+      listNames.forEach((name) => {
         const chip = document.createElement('span');
         chip.className = 'chip';
-        chip.textContent = nome;
-        listas.appendChild(chip);
+        chip.textContent = name;
+        listsBox.appendChild(chip);
       });
 
-      listas.hidden = false;
+      listsBox.hidden = false;
     }
 
     if (book.description) {
-      const sobre = dialog.querySelector('[data-field="about"]');
-      const descricao = dialog.querySelector('[data-field="description"]');
-      const alternar = dialog.querySelector('[data-action="toggle-description"]');
+      const aboutSection = dialog.querySelector('[data-field="about"]');
+      const descriptionEl = dialog.querySelector('[data-field="description"]');
+      const toggleButton = dialog.querySelector('[data-action="toggle-description"]');
 
-      descricao.textContent = book.description;
-      sobre.hidden = false;
+      descriptionEl.textContent = book.description;
+      aboutSection.hidden = false;
 
       // Texto longo: começa recolhido, com "Ver mais".
-      const quebras = (book.description.match(/\n/g) || []).length;
+      const lineBreaks = (book.description.match(/\n/g) || []).length;
 
-      if (book.description.length > LIMITE_DESCRICAO || quebras > 6) {
-        descricao.classList.add('is-clamped');
-        alternar.hidden = false;
+      if (book.description.length > DESCRIPTION_COLLAPSE_LIMIT || lineBreaks > 6) {
+        descriptionEl.classList.add('is-clamped');
+        toggleButton.hidden = false;
 
-        alternar.addEventListener('click', () => {
-          const recolhida = descricao.classList.toggle('is-clamped');
-          alternar.textContent = recolhida ? 'Ver mais' : 'Ver menos';
+        toggleButton.addEventListener('click', () => {
+          const isCollapsed = descriptionEl.classList.toggle('is-clamped');
+          toggleButton.textContent = isCollapsed ? 'Ver mais' : 'Ver menos';
         });
       }
     }
 
-    // ----- Avaliação -----
-    const secaoNota = document.createElement('section');
-    secaoNota.className = 'detail-section';
+    // --- Avaliação ---
+    const ratingSection = document.createElement('section');
+    ratingSection.className = 'detail-section';
 
-    const tituloNota = document.createElement('h3');
-    tituloNota.className = 'section-title';
-    tituloNota.textContent = 'Avaliação';
+    const ratingTitle = document.createElement('h3');
+    ratingTitle.className = 'section-title';
+    ratingTitle.textContent = 'Avaliação';
 
-    const nota = ratingView.createInput({
+    const ratingInput = ratingView.createInput({
       value: book.rating ?? null,
-      onChange: async (novaNota) => {
-        const atualizado = await onRate(book, novaNota);
+      onChange: async (newRating) => {
+        const updatedBook = await onRate(book, newRating);
 
         // Mantém o objeto em memória igual ao banco (inclui book_lists, que não muda aqui).
-        Object.assign(book, atualizado);
-        alterado = true;
+        Object.assign(book, updatedBook);
+        hasChanges = true;
 
-        mostrarFeedback(
-          novaNota === null ? 'Avaliação removida.' : `Avaliação salva: ${novaNota} de 5.`,
-          'sucesso'
+        showFeedback(
+          newRating === null ? 'Avaliação removida.' : `Avaliação salva: ${newRating} de 5.`,
+          'success'
         );
       },
       onError: (error) => {
         console.error('Erro ao salvar a avaliação:', error);
-        mostrarFeedback(error?.message || 'Não foi possível salvar a avaliação.', 'erro');
+        showFeedback(error?.message || 'Não foi possível salvar a avaliação.', 'error');
       }
     });
 
-    secaoNota.append(tituloNota, nota.element);
+    ratingSection.append(ratingTitle, ratingInput.element);
 
-    // ----- Progresso -----
-    const progresso = progressView.createSection({
+    // --- Progresso ---
+    const progressSection = progressView.createSection({
       book,
-      onSave: async (pagina) => {
-        const atualizado = await onSaveProgress(book, pagina);
+      onSave: async (page) => {
+        const updatedBook = await onSaveProgress(book, page);
 
-        Object.assign(book, atualizado);
-        alterado = true;
+        Object.assign(book, updatedBook);
+        hasChanges = true;
 
-        desenharFatos(); // a situação da leitura acompanha o progresso
-        mostrarFeedback('Página atual atualizada.', 'sucesso');
+        renderFacts(); // a situação da leitura acompanha o progresso
+        showFeedback('Página atual atualizada.', 'success');
       }
     });
 
-    dialog.querySelector('[data-slot="panels"]').append(secaoNota, progresso.element);
+    dialog.querySelector('[data-slot="panels"]').append(ratingSection, progressSection.element);
 
-    // ----- Anotações por página -----
+    // --- Anotações por página ---
     // Carregada à parte: se o arquivo faltar, o resto da janela continua funcionando.
     if (notesApi) {
       import('./notes_view.js')
         .then(({ notesView }) => {
           // Cada chamada já leva o livro DESTA janela (anotações de um livro nunca aparecem em outro).
-          const notas = notesView.createSection({
+          const notesSection = notesView.createSection({
             book,
             confirmDelete,
             api: {
               list: () => notesApi.list(book),
-              create: (dados) => notesApi.create(book, dados),
-              update: (nota, dados) => notesApi.update(book, nota, dados),
-              remove: (nota) => notesApi.remove(nota)
+              create: (noteData) => notesApi.create(book, noteData),
+              update: (note, noteData) => notesApi.update(book, note, noteData),
+              remove: (note) => notesApi.remove(note)
             }
           });
 
-          area.appendChild(notas.element);
+          area.appendChild(notesSection.element);
         })
         .catch((error) => console.error('Não foi possível carregar as anotações:', error));
     }
 
-    // ----- Botões -----
+    // --- Botões ---
     dialog.querySelector('[data-action="close"]').addEventListener('click', () => dialog.close());
 
     dialog.querySelector('[data-action="edit"]').addEventListener('click', () => {
-      saindo = true;
+      isLeaving = true;
       dialog.close();
 
       if (typeof onEdit === 'function') {
@@ -253,8 +251,8 @@ export const bookDetailsView = {
     dialog.addEventListener('close', () => {
       dialog.remove();
 
-      if (!saindo && typeof onClose === 'function') {
-        onClose({ changed: alterado });
+      if (!isLeaving && typeof onClose === 'function') {
+        onClose({ changed: hasChanges });
       }
     });
 

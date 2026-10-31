@@ -1,10 +1,12 @@
+import { setMessage, withBusyButton } from './ui_helpers.js';
+
 // Seção "Anotações" da janela de detalhes do livro.
 // Só desenha a interface: quem fala com o banco são as funções de "api" recebidas
 // (veja o app.js), que sempre trabalham com o livro desta janela.
 
 // Ordem crescente de página; na mesma página, a mais antiga primeiro.
-function ordenar(notas) {
-  return [...notas].sort((a, b) => a.page - b.page || String(a.created_at).localeCompare(String(b.created_at)));
+function sortNotes(notes) {
+  return [...notes].sort((a, b) => a.page - b.page || String(a.created_at).localeCompare(String(b.created_at)));
 }
 
 export const notesView = {
@@ -12,8 +14,8 @@ export const notesView = {
   // confirmDelete(opcoes): abre a confirmação e retorna true/false
   createSection({ book, api, confirmDelete }) {
     const total = book.pages_count || null;
-    let notas = [];
-    let editando = null; // anotação em edição (null = criando uma nova)
+    let notes = [];
+    let editingNote = null; // anotação em edição (null = criando uma nova)
 
     const section = document.createElement('section');
     section.className = 'detail-section notes-section';
@@ -60,298 +62,287 @@ export const notesView = {
       <div data-field="list-area"></div>
     `;
 
-    const novoBtn = section.querySelector('[data-action="new-note"]');
-    const contador = section.querySelector('[data-field="count"]');
+    const newNoteButton = section.querySelector('[data-action="new-note"]');
+    const counter = section.querySelector('[data-field="count"]');
     const form = section.querySelector('form');
-    const tituloForm = section.querySelector('[data-field="form-title"]');
+    const formTitle = section.querySelector('[data-field="form-title"]');
     const titleInput = section.querySelector('#note-title');
     const pageInput = section.querySelector('#note-page');
     const contentInput = section.querySelector('#note-content');
-    const dicaPagina = section.querySelector('[data-field="page-hint"]');
-    const msgForm = section.querySelector('[data-field="form-message"]');
+    const pageHint = section.querySelector('[data-field="page-hint"]');
+    const formMessage = section.querySelector('[data-field="form-message"]');
     const status = section.querySelector('[data-field="status"]');
     const area = section.querySelector('[data-field="list-area"]');
-    const salvarBtn = form.querySelector('button[type="submit"]');
-    const salvarRotulo = salvarBtn.querySelector('span');
+    const saveButton = form.querySelector('button[type="submit"]');
+    const saveLabel = saveButton.querySelector('span');
 
     // A página só pode ir até o total de páginas do livro (se ele tiver total cadastrado).
     if (total) {
       pageInput.max = String(total);
-      dicaPagina.textContent = `De 1 a ${total}.`;
+      pageHint.textContent = `De 1 a ${total}.`;
     } else {
-      dicaPagina.textContent = 'O livro não tem total de páginas cadastrado.';
+      pageHint.textContent = 'O livro não tem total de páginas cadastrado.';
     }
 
-    // ----- mensagens -----
-    function mostrarStatus(texto, tipo = 'sucesso') {
-      status.textContent = texto;
-      status.className = texto ? `form-message ${tipo === 'erro' ? 'error-text' : 'success-text'}` : 'form-message';
+    // --- mensagens ---
+    const showStatus = (text, tone = 'success') => setMessage(status, text, tone);
+    const showFormError = (text) => setMessage(formMessage, text, 'error');
+
+    // --- lista ---
+    function renderSimpleState(className, text) {
+      const block = document.createElement('p');
+      block.className = className;
+      block.textContent = text;
+      area.replaceChildren(block);
     }
 
-    function mostrarErroDoForm(texto) {
-      msgForm.textContent = texto;
-      msgForm.className = texto ? 'form-message error-text' : 'form-message';
-    }
-
-    // ----- lista -----
-    function desenharEstadoSimples(classe, texto) {
-      const bloco = document.createElement('p');
-      bloco.className = classe;
-      bloco.textContent = texto;
-      area.replaceChildren(bloco);
-    }
-
-    function criarItem(nota) {
+    function createItem(note) {
       const item = document.createElement('li');
       item.className = 'note-item';
-      item.dataset.noteId = nota.id;
+      item.dataset.noteId = note.id;
 
-      if (editando && editando.id === nota.id) {
+      if (editingNote && editingNote.id === note.id) {
         item.classList.add('is-editing');
       }
 
-      const cabecalho = document.createElement('div');
-      cabecalho.className = 'note-item-head';
+      const head = document.createElement('div');
+      head.className = 'note-item-head';
 
-      const pagina = document.createElement('span');
-      pagina.className = 'note-page';
-      pagina.textContent = `Pág. ${nota.page}`;
+      const pageBadge = document.createElement('span');
+      pageBadge.className = 'note-page';
+      pageBadge.textContent = `Pág. ${note.page}`;
 
-      const titulo = document.createElement('span');
-      titulo.className = 'note-title';
-      titulo.textContent = nota.title;
+      const titleEl = document.createElement('span');
+      titleEl.className = 'note-title';
+      titleEl.textContent = note.title;
 
-      const acoes = document.createElement('div');
-      acoes.className = 'note-actions';
+      const actionsBox = document.createElement('div');
+      actionsBox.className = 'note-actions';
 
-      const editar = document.createElement('button');
-      editar.type = 'button';
-      editar.className = 'note-action';
-      editar.dataset.action = 'edit-note';
-      editar.textContent = 'Editar';
-      editar.setAttribute('aria-label', `Editar anotação ${nota.title}`);
+      const editButton = document.createElement('button');
+      editButton.type = 'button';
+      editButton.className = 'note-action';
+      editButton.dataset.action = 'edit-note';
+      editButton.textContent = 'Editar';
+      editButton.setAttribute('aria-label', `Editar anotação ${note.title}`);
 
-      const excluir = document.createElement('button');
-      excluir.type = 'button';
-      excluir.className = 'note-action is-danger';
-      excluir.dataset.action = 'delete-note';
-      excluir.textContent = 'Excluir';
-      excluir.setAttribute('aria-label', `Excluir anotação ${nota.title}`);
+      const deleteButton = document.createElement('button');
+      deleteButton.type = 'button';
+      deleteButton.className = 'note-action is-danger';
+      deleteButton.dataset.action = 'delete-note';
+      deleteButton.textContent = 'Excluir';
+      deleteButton.setAttribute('aria-label', `Excluir anotação ${note.title}`);
 
-      acoes.append(editar, excluir);
-      cabecalho.append(pagina, titulo, acoes);
+      actionsBox.append(editButton, deleteButton);
+      head.append(pageBadge, titleEl, actionsBox);
 
-      const comentario = document.createElement('p');
-      comentario.className = 'note-content';
-      comentario.textContent = nota.content;
+      const commentEl = document.createElement('p');
+      commentEl.className = 'note-content';
+      commentEl.textContent = note.content;
 
-      item.append(cabecalho, comentario);
+      item.append(head, commentEl);
       return item;
     }
 
-    function desenharLista() {
-      contador.textContent = `(${notas.length})`;
+    function renderList() {
+      counter.textContent = `(${notes.length})`;
 
-      if (notas.length === 0) {
-        desenharEstadoSimples(
+      if (notes.length === 0) {
+        renderSimpleState(
           'note-empty',
           'Nenhuma anotação ainda. Registre trechos e ideias ligados a uma página do livro.'
         );
         return;
       }
 
-      const lista = document.createElement('ul');
-      lista.className = 'note-list';
-      notas.forEach((nota) => lista.appendChild(criarItem(nota)));
-      area.replaceChildren(lista);
+      const listEl = document.createElement('ul');
+      listEl.className = 'note-list';
+      notes.forEach((note) => listEl.appendChild(createItem(note)));
+      area.replaceChildren(listEl);
     }
 
-    async function carregar() {
-      contador.textContent = '';
+    async function load() {
+      counter.textContent = '';
 
-      const carregando = document.createElement('p');
-      carregando.className = 'note-loading';
-      carregando.setAttribute('role', 'status');
+      const loadingBlock = document.createElement('p');
+      loadingBlock.className = 'note-loading';
+      loadingBlock.setAttribute('role', 'status');
 
-      const girando = document.createElement('span');
-      girando.className = 'note-spinner';
+      const spinner = document.createElement('span');
+      spinner.className = 'note-spinner';
 
-      const texto = document.createElement('span');
-      texto.textContent = 'Carregando anotações...';
+      const loadingText = document.createElement('span');
+      loadingText.textContent = 'Carregando anotações...';
 
-      carregando.append(girando, texto);
-      area.replaceChildren(carregando);
+      loadingBlock.append(spinner, loadingText);
+      area.replaceChildren(loadingBlock);
 
       try {
-        const resultado = await api.list();
+        const loadedNotes = await api.list();
 
         // Segurança extra: só entram anotações deste livro.
-        notas = ordenar(resultado.filter((nota) => nota.book_id === book.id));
-        desenharLista();
+        notes = sortNotes(loadedNotes.filter((note) => note.book_id === book.id));
+        renderList();
       } catch (error) {
         console.error('Erro ao carregar anotações:', error);
 
-        const bloco = document.createElement('div');
-        bloco.className = 'note-empty';
+        const block = document.createElement('div');
+        block.className = 'note-empty';
 
-        const mensagem = document.createElement('p');
-        mensagem.className = 'error-text';
-        mensagem.textContent = error?.message || 'Não foi possível carregar as anotações.';
+        const messageText = document.createElement('p');
+        messageText.className = 'error-text';
+        messageText.textContent = error?.message || 'Não foi possível carregar as anotações.';
 
-        const tentar = document.createElement('button');
-        tentar.type = 'button';
-        tentar.className = 'btn btn-outline';
-        tentar.textContent = 'Tentar novamente';
-        tentar.addEventListener('click', carregar);
+        const retryButton = document.createElement('button');
+        retryButton.type = 'button';
+        retryButton.className = 'btn btn-outline';
+        retryButton.textContent = 'Tentar novamente';
+        retryButton.addEventListener('click', load);
 
-        bloco.append(mensagem, tentar);
-        area.replaceChildren(bloco);
+        block.append(messageText, retryButton);
+        area.replaceChildren(block);
       }
     }
 
-    // ----- formulário (usado para criar e para editar) -----
-    function abrirForm(nota = null) {
-      editando = nota;
+    // --- formulário (usado para criar e para editar) ---
+    function openForm(note = null) {
+      editingNote = note;
 
-      tituloForm.textContent = nota ? 'Editar anotação' : 'Nova anotação';
-      salvarRotulo.textContent = nota ? 'Salvar alterações' : 'Salvar anotação';
+      formTitle.textContent = note ? 'Editar anotação' : 'Nova anotação';
+      saveLabel.textContent = note ? 'Salvar alterações' : 'Salvar anotação';
 
-      titleInput.value = nota?.title ?? '';
-      pageInput.value = nota ? String(nota.page) : '';
-      contentInput.value = nota?.content ?? '';
+      titleInput.value = note?.title ?? '';
+      pageInput.value = note ? String(note.page) : '';
+      contentInput.value = note?.content ?? '';
 
-      mostrarErroDoForm('');
-      mostrarStatus('');
+      showFormError('');
+      showStatus('');
 
       form.hidden = false;
-      novoBtn.hidden = true;
+      newNoteButton.hidden = true;
 
-      if (notas.length > 0) {
-        desenharLista(); // destaca a anotação em edição
+      if (notes.length > 0) {
+        renderList(); // destaca a anotação em edição
       }
 
       form.scrollIntoView({ block: 'nearest' });
       titleInput.focus();
     }
 
-    function fecharForm() {
-      editando = null;
+    function closeForm() {
+      editingNote = null;
       form.hidden = true;
-      novoBtn.hidden = false;
+      newNoteButton.hidden = false;
       form.reset();
-      mostrarErroDoForm('');
+      showFormError('');
 
-      if (notas.length > 0) {
-        desenharLista();
+      if (notes.length > 0) {
+        renderList();
       }
     }
 
-    novoBtn.addEventListener('click', () => abrirForm());
-    section.querySelector('[data-action="cancel-note"]').addEventListener('click', fecharForm);
+    newNoteButton.addEventListener('click', () => openForm());
+    section.querySelector('[data-action="cancel-note"]').addEventListener('click', closeForm);
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
 
       // Evita envio duplicado enquanto salva.
-      if (salvarBtn.disabled) return;
+      if (saveButton.disabled) return;
 
-      const dados = {
+      const noteData = {
         title: titleInput.value,
         page: pageInput.value,
         content: contentInput.value
       };
 
-      const original = salvarRotulo.textContent;
-      salvarBtn.disabled = true;
-      salvarRotulo.textContent = 'Salvando...';
-      mostrarErroDoForm('');
+      showFormError('');
 
       try {
-        let mensagem;
+        await withBusyButton(saveButton, 'Salvando...', async () => {
+          let messageText;
 
-        if (editando) {
-          const atualizada = await api.update(editando, dados);
-          notas = ordenar(notas.map((nota) => (nota.id === atualizada.id ? atualizada : nota)));
-          mensagem = 'Anotação atualizada.';
-        } else {
-          const criada = await api.create(dados);
-          notas = ordenar([...notas, criada]);
-          mensagem = 'Anotação salva.';
-        }
+          if (editingNote) {
+            const updatedNote = await api.update(editingNote, noteData);
+            notes = sortNotes(notes.map((note) => (note.id === updatedNote.id ? updatedNote : note)));
+            messageText = 'Anotação atualizada.';
+          } else {
+            const createdNote = await api.create(noteData);
+            notes = sortNotes([...notes, createdNote]);
+            messageText = 'Anotação salva.';
+          }
 
-        fecharForm();
-        desenharLista();
-        mostrarStatus(mensagem);
+          closeForm();
+          renderList();
+          showStatus(messageText);
+        });
       } catch (error) {
         console.error('Erro ao salvar anotação:', error);
-        mostrarErroDoForm(error?.message || 'Não foi possível salvar a anotação.');
-      } finally {
-        salvarBtn.disabled = false;
-        salvarRotulo.textContent = original;
+        showFormError(error?.message || 'Não foi possível salvar a anotação.');
       }
     });
 
     // Editar e excluir (um único ouvinte para toda a lista).
     area.addEventListener('click', async (event) => {
-      const botao = event.target.closest('[data-action]');
+      const actionButton = event.target.closest('[data-action]');
       const item = event.target.closest('.note-item');
 
-      if (!botao || !item) {
+      if (!actionButton || !item) {
         return;
       }
 
-      const nota = notas.find((candidata) => candidata.id === item.dataset.noteId);
+      const note = notes.find((candidate) => candidate.id === item.dataset.noteId);
 
-      if (!nota) {
+      if (!note) {
         return;
       }
 
-      if (botao.dataset.action === 'edit-note') {
-        abrirForm(nota);
+      if (actionButton.dataset.action === 'edit-note') {
+        openForm(note);
         return;
       }
 
-      if (botao.dataset.action === 'delete-note') {
-        const opcoes = {
+      if (actionButton.dataset.action === 'delete-note') {
+        const dialogOptions = {
           title: 'Excluir anotação',
-          message: `A anotação "${nota.title}" (página ${nota.page}) será excluída permanentemente.`,
+          message: `A anotação "${note.title}" (página ${note.page}) será excluída permanentemente.`,
           confirmText: 'Excluir',
           danger: true
         };
 
-        const confirmou = typeof confirmDelete === 'function'
-          ? await confirmDelete(opcoes)
-          : window.confirm(opcoes.message);
+        const confirmed = typeof confirmDelete === 'function'
+          ? await confirmDelete(dialogOptions)
+          : window.confirm(dialogOptions.message);
 
-        if (!confirmou) {
+        if (!confirmed) {
           return;
         }
 
         item.classList.add('is-busy');
-        mostrarStatus('');
+        showStatus('');
 
         try {
-          await api.remove(nota);
+          await api.remove(note);
 
-          notas = notas.filter((candidata) => candidata.id !== nota.id);
+          notes = notes.filter((candidate) => candidate.id !== note.id);
 
           // Se a anotação excluída estava sendo editada, fecha o formulário.
-          if (editando && editando.id === nota.id) {
-            fecharForm();
+          if (editingNote && editingNote.id === note.id) {
+            closeForm();
           }
 
-          desenharLista();
-          mostrarStatus('Anotação excluída.');
+          renderList();
+          showStatus('Anotação excluída.');
         } catch (error) {
           console.error('Erro ao excluir anotação:', error);
           item.classList.remove('is-busy');
-          mostrarStatus(error?.message || 'Não foi possível excluir a anotação.', 'erro');
+          showStatus(error?.message || 'Não foi possível excluir a anotação.', 'error');
         }
       }
     });
 
-    carregar();
+    load();
 
-    return { element: section, reload: carregar };
+    return { element: section };
   }
 };

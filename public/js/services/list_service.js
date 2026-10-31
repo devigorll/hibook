@@ -1,26 +1,29 @@
 import { supabase } from '../config/supabase.js';
+import { requireUser } from './session.js';
+import { translateDbError } from './errors.js';
 
-// Busca o usuário logado ou lança um erro com a mensagem informada.
-async function getUserOrThrow(mensagemSemLogin) {
-  const {
-    data: { user },
-    error
-  } = await supabase.auth.getUser();
+function toError(error) {
+  return new Error(
+    translateDbError(error, {
+      duplicate: 'Você já tem uma lista com esse nome.',
+      notFound: 'Lista não encontrada ou sem permissão.'
+    })
+  );
+}
 
-  if (error) {
-    throw error;
+function cleanName(name) {
+  const clean = name.trim();
+
+  if (!clean) {
+    throw new Error('Informe o nome da lista.');
   }
 
-  if (!user) {
-    throw new Error(mensagemSemLogin);
-  }
-
-  return user;
+  return clean;
 }
 
 export const listService = {
   async getLists() {
-    const user = await getUserOrThrow('Faça login para visualizar suas listas.');
+    const user = await requireUser('Faça login para visualizar suas listas.');
 
     const { data, error } = await supabase
       .from('lists')
@@ -29,45 +32,32 @@ export const listService = {
       .order('created_at', { ascending: true });
 
     if (error) {
-      throw error;
+      throw toError(error);
     }
 
     return data ?? [];
   },
 
   async createList(name) {
-    const listName = name.trim();
-
-    if (!listName) {
-      throw new Error('Informe o nome da lista.');
-    }
-
-    const user = await getUserOrThrow('Faça login para criar uma lista.');
+    const listName = cleanName(name);
+    const user = await requireUser('Faça login para criar uma lista.');
 
     const { data, error } = await supabase
       .from('lists')
-      .insert({
-        name: listName,
-        user_id: user.id
-      })
+      .insert({ name: listName, user_id: user.id })
       .select()
       .single();
 
     if (error) {
-      throw error;
+      throw toError(error);
     }
 
     return data;
   },
 
   async renameList(listId, newName) {
-    const listName = newName.trim();
-
-    if (!listName) {
-      throw new Error('Informe o nome da lista.');
-    }
-
-    await getUserOrThrow('Faça login para renomear a lista.');
+    const listName = cleanName(newName);
+    await requireUser('Faça login para renomear a lista.');
 
     const { data, error } = await supabase
       .from('lists')
@@ -77,29 +67,20 @@ export const listService = {
       .single();
 
     if (error) {
-      // PGRST116 = nenhuma linha atualizada (lista inexistente ou sem permissão).
-      if (error.code === 'PGRST116') {
-        throw new Error('Lista não encontrada ou sem permissão para alterá-la.');
-      }
-
-      throw error;
+      throw toError(error);
     }
 
     return data;
   },
 
-  // Exclui só a lista. Os livros continuam existindo (o vínculo é removido por CASCADE).
+  // Exclui só a lista: os livros continuam existindo (o vínculo some por CASCADE).
   async deleteList(listId) {
-    await getUserOrThrow('Faça login para excluir a lista.');
+    await requireUser('Faça login para excluir a lista.');
 
-    const { data, error } = await supabase
-      .from('lists')
-      .delete()
-      .eq('id', listId)
-      .select('id');
+    const { data, error } = await supabase.from('lists').delete().eq('id', listId).select('id');
 
     if (error) {
-      throw error;
+      throw toError(error);
     }
 
     if (!data || data.length === 0) {

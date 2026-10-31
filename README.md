@@ -31,6 +31,7 @@ Este projeto foi construído utilizando as seguintes tecnologias e ferramentas:
 * **Hospedagem & Deploy:**
   * `Vercel` (Deploy contínuo e alta disponibilidade)
 
+
 ---
 
 ## ✨ Funcionalidades

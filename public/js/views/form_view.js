@@ -1,22 +1,22 @@
 import { listService } from '../services/list_service.js';
 import { bookService } from '../services/book_service.js';
+import { setMessage, withBusyButton } from './ui_helpers.js';
 
-// ==========================================
+// ============================================================
 // Funções auxiliares (usadas pelos formulários de livro)
-// ==========================================
-
+// ============================================================
 // Controla o botão de escolher imagem, a prévia e o botão de remover/desfazer.
 // initialUrl: capa atual (na edição). Sem ela, a prévia começa vazia.
 function setupCoverPicker({ coverInput, coverBtn, clearBtn, preview, initialUrl = null, onError }) {
   let previewUrl = null;
 
-  function mostrarVazio() {
-    const texto = document.createElement('span');
-    texto.textContent = 'Nenhuma imagem selecionada';
-    preview.replaceChildren(texto);
+  function showEmpty() {
+    const emptyText = document.createElement('span');
+    emptyText.textContent = 'Nenhuma imagem selecionada';
+    preview.replaceChildren(emptyText);
   }
 
-  function mostrarImagem(src, alt) {
+  function showImage(src, alt) {
     const img = document.createElement('img');
     img.src = src;
     img.alt = alt;
@@ -34,9 +34,9 @@ function setupCoverPicker({ coverInput, coverBtn, clearBtn, preview, initialUrl 
     clearBtn.hidden = true;
 
     if (initialUrl) {
-      mostrarImagem(initialUrl, 'Capa atual');
+      showImage(initialUrl, 'Capa atual');
     } else {
-      mostrarVazio();
+      showEmpty();
     }
   }
 
@@ -54,11 +54,11 @@ function setupCoverPicker({ coverInput, coverBtn, clearBtn, preview, initialUrl 
       return;
     }
 
-    const erro = bookService.validateCover(file);
+    const coverError = bookService.validateCover(file);
 
-    if (erro) {
+    if (coverError) {
       reset();
-      onError(erro);
+      onError(coverError);
       return;
     }
 
@@ -69,7 +69,7 @@ function setupCoverPicker({ coverInput, coverBtn, clearBtn, preview, initialUrl 
     }
 
     previewUrl = URL.createObjectURL(file);
-    mostrarImagem(previewUrl, 'Prévia da capa');
+    showImage(previewUrl, 'Prévia da capa');
     clearBtn.hidden = false;
   });
 
@@ -81,43 +81,35 @@ function setupCoverPicker({ coverInput, coverBtn, clearBtn, preview, initialUrl 
   };
 }
 
-// Lê e valida título e páginas. Retorna { titulo, paginas } ou { erro, campo }.
-function lerTituloEPaginas(titleInput, pagesInput) {
-  const titulo = titleInput.value.trim();
+// Lê e valida título e páginas. Retorna { title, pages } ou { error, field } (o campo a focar).
+function readTitleAndPages(titleInput, pagesInput) {
+  const title = titleInput.value.trim();
 
-  if (!titulo) {
-    return { erro: 'Informe o título do livro.', campo: titleInput };
+  if (!title) {
+    return { error: 'Informe o título do livro.', field: titleInput };
   }
 
-  const bruto = pagesInput.value.trim();
-  let paginas = null;
+  const rawValue = pagesInput.value.trim();
+  let pages = null;
 
-  if (bruto !== '') {
-    const numero = Number(bruto);
+  if (rawValue !== '') {
+    const pageNumber = Number(rawValue);
 
-    if (!Number.isInteger(numero) || numero <= 0) {
-      return { erro: 'A quantidade de páginas deve ser um número inteiro positivo.', campo: pagesInput };
+    if (!Number.isInteger(pageNumber) || pageNumber <= 0) {
+      return { error: 'A quantidade de páginas deve ser um número inteiro positivo.', field: pagesInput };
     }
 
-    paginas = numero;
+    pages = pageNumber;
   }
 
-  return { titulo, paginas };
-}
-
-// Mostra mensagem de sucesso/erro em um parágrafo .form-message.
-function criarMensagem(elemento) {
-  return (texto, tipo) => {
-    elemento.textContent = texto;
-    elemento.className = `form-message ${tipo === 'erro' ? 'error-text' : 'success-text'}`;
-  };
+  return { title, pages };
 }
 
 export const formView = {
-  // ==========================================
+  // ============================================================
   // Formulário: Criar Lista
   // onCreated é chamado após salvar, para o app atualizar a sidebar.
-  // ==========================================
+  // ============================================================
   renderCreateListForm(container, onCreated) {
     container.innerHTML = `
       <div class="form-card">
@@ -148,7 +140,8 @@ export const formView = {
     const form = container.querySelector('#create-list-form');
     const input = container.querySelector('#list-name');
     const submitBtn = container.querySelector('#create-list-submit');
-    const mostrarMensagem = criarMensagem(container.querySelector('#create-list-message'));
+    const messageEl = container.querySelector('#create-list-message');
+    const showFormMessage = (text, tone) => setMessage(messageEl, text, tone);
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -156,38 +149,31 @@ export const formView = {
       // Evita envio duplicado enquanto processa.
       if (submitBtn.disabled) return;
 
-      const nome = input.value.trim();
+      const listName = input.value.trim();
 
-      if (!nome) {
-        mostrarMensagem('Informe o nome da lista.', 'erro');
+      if (!listName) {
+        showFormMessage('Informe o nome da lista.', 'error');
         input.focus();
         return;
       }
 
-      submitBtn.disabled = true;
-      mostrarMensagem('', 'sucesso');
+      showFormMessage('');
 
       try {
-        await listService.createList(nome);
+        await withBusyButton(submitBtn, null, async () => {
+          await listService.createList(listName);
 
-        form.reset();
-        mostrarMensagem(`Lista "${nome}" criada com sucesso!`, 'sucesso');
+          form.reset();
+          showFormMessage(`Lista "${listName}" criada com sucesso!`, 'success');
 
-        if (typeof onCreated === 'function') {
-          await onCreated();
-        }
+          if (typeof onCreated === 'function') {
+            await onCreated();
+          }
+        });
       } catch (error) {
         console.error('Erro ao criar lista:', error);
-
-        // 23505 = violação de unicidade (nome repetido).
-        const texto =
-          error?.code === '23505'
-            ? 'Você já tem uma lista com esse nome.'
-            : error?.message || 'Não foi possível criar a lista.';
-
-        mostrarMensagem(texto, 'erro');
+        showFormMessage(error?.message || 'Não foi possível criar a lista.', 'error');
       } finally {
-        submitBtn.disabled = false;
         input.focus();
       }
     });
@@ -195,11 +181,11 @@ export const formView = {
     input.focus();
   },
 
-  // ==========================================
+  // ============================================================
   // Formulário: Criar Livro
   // lists: listas do usuário (campo "Lista")
   // onCreated(book): chamado após salvar
-  // ==========================================
+  // ============================================================
   renderCreateBookForm(container, { lists = [], onCreated } = {}) {
     container.innerHTML = `
       <div class="form-card">
@@ -274,9 +260,9 @@ export const formView = {
     const pagesInput = container.querySelector('#book-pages');
     const listSelect = container.querySelector('#book-list');
     const submitBtn = container.querySelector('#create-book-submit');
-    const submitLabel = submitBtn.querySelector('span');
     const coverBtn = container.querySelector('#book-cover-btn');
-    const mostrarMensagem = criarMensagem(container.querySelector('#create-book-message'));
+    const messageEl = container.querySelector('#create-book-message');
+    const showFormMessage = (text, tone) => setMessage(messageEl, text, tone);
 
     // Preenche o campo "Lista" (textContent evita HTML nos nomes).
     lists.forEach((list) => {
@@ -291,18 +277,18 @@ export const formView = {
       coverBtn,
       clearBtn: container.querySelector('#book-cover-clear'),
       preview: container.querySelector('#cover-preview'),
-      onError: (texto) => mostrarMensagem(texto, 'erro')
+      onError: (text) => showFormMessage(text, 'error')
     });
 
     // Confere se a URL pública da capa abre (testa se o bucket está público).
-    function verificarCapaPublica(url, titulo) {
+    function verifyPublicCover(url, title) {
       const img = new Image();
 
       img.onerror = () => {
-        mostrarMensagem(
-          `Livro "${titulo}" salvo, mas a URL pública da capa não abriu. ` +
+        showFormMessage(
+          `Livro "${title}" salvo, mas a URL pública da capa não abriu. ` +
             'Verifique se o bucket book-covers está público.',
-          'erro'
+          'error'
         );
       };
 
@@ -316,61 +302,58 @@ export const formView = {
       if (submitBtn.disabled) return;
 
       const file = picker.getFile();
-      const erroCapa = bookService.validateCover(file);
+      const coverError = bookService.validateCover(file);
 
-      if (erroCapa) {
-        mostrarMensagem(erroCapa, 'erro');
+      if (coverError) {
+        showFormMessage(coverError, 'error');
         coverBtn.focus();
         return;
       }
 
-      const dados = lerTituloEPaginas(titleInput, pagesInput);
+      const parsed = readTitleAndPages(titleInput, pagesInput);
 
-      if (dados.erro) {
-        mostrarMensagem(dados.erro, 'erro');
-        dados.campo.focus();
+      if (parsed.error) {
+        showFormMessage(parsed.error, 'error');
+        parsed.field.focus();
         return;
       }
 
-      submitBtn.disabled = true;
-      submitLabel.textContent = 'Salvando...';
-      mostrarMensagem('', 'sucesso');
+      showFormMessage('');
 
       try {
-        const book = await bookService.createBook({
-          title: dados.titulo,
-          description: descriptionInput.value,
-          pagesCount: dados.paginas,
-          coverFile: file,
-          listId: listSelect.value || null
+        await withBusyButton(submitBtn, 'Salvando...', async () => {
+          const book = await bookService.createBook({
+            title: parsed.title,
+            description: descriptionInput.value,
+            pagesCount: parsed.pages,
+            coverFile: file,
+            listId: listSelect.value || null
+          });
+
+          form.reset();
+          picker.reset();
+          showFormMessage(`Livro "${parsed.title}" cadastrado com sucesso!`, 'success');
+          verifyPublicCover(book.cover_url, parsed.title);
+
+          if (typeof onCreated === 'function') {
+            await onCreated(book);
+          }
         });
-
-        form.reset();
-        picker.reset();
-        mostrarMensagem(`Livro "${dados.titulo}" cadastrado com sucesso!`, 'sucesso');
-        verificarCapaPublica(book.cover_url, dados.titulo);
-
-        if (typeof onCreated === 'function') {
-          await onCreated(book);
-        }
       } catch (error) {
         console.error('Erro ao cadastrar livro:', error);
-        mostrarMensagem(error?.message || 'Não foi possível cadastrar o livro.', 'erro');
-      } finally {
-        submitBtn.disabled = false;
-        submitLabel.textContent = 'Salvar livro';
+        showFormMessage(error?.message || 'Não foi possível cadastrar o livro.', 'error');
       }
     });
 
     titleInput.focus();
   },
 
-  // ==========================================
+  // ============================================================
   // Formulário: Editar Livro
   // book: livro com book_lists: [{ list_id }]
   // lists: todas as listas do usuário (caixas de seleção)
   // onSaved(livroAtualizado) e onCancel() definem para onde voltar
-  // ==========================================
+  // ============================================================
   renderEditBookForm(container, { book, lists = [], onSaved, onCancel } = {}) {
     container.innerHTML = `
       <div class="form-card">
@@ -445,21 +428,21 @@ export const formView = {
     const pagesInput = container.querySelector('#book-pages');
     const listsBox = container.querySelector('#book-lists');
     const submitBtn = container.querySelector('#edit-book-submit');
-    const submitLabel = submitBtn.querySelector('span');
-    const mostrarMensagem = criarMensagem(container.querySelector('#edit-book-message'));
+    const messageEl = container.querySelector('#edit-book-message');
+    const showFormMessage = (text, tone) => setMessage(messageEl, text, tone);
 
     // Valores atuais (atribuídos por .value, nunca por HTML).
     titleInput.value = book.title ?? '';
     descriptionInput.value = book.description ?? '';
     pagesInput.value = book.pages_count ?? '';
 
-    const listasDoLivro = new Set((book.book_lists ?? []).map((vinculo) => vinculo.list_id));
+    const bookListIds = new Set((book.book_lists ?? []).map((link) => link.list_id));
 
     if (lists.length === 0) {
-      const aviso = document.createElement('p');
-      aviso.className = 'field-hint';
-      aviso.textContent = 'Você ainda não criou nenhuma lista.';
-      listsBox.appendChild(aviso);
+      const hint = document.createElement('p');
+      hint.className = 'field-hint';
+      hint.textContent = 'Você ainda não criou nenhuma lista.';
+      listsBox.appendChild(hint);
     }
 
     lists.forEach((list) => {
@@ -469,12 +452,12 @@ export const formView = {
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.value = list.id;
-      checkbox.checked = listasDoLivro.has(list.id);
+      checkbox.checked = bookListIds.has(list.id);
 
-      const nome = document.createElement('span');
-      nome.textContent = list.name;
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = list.name;
 
-      label.append(checkbox, nome);
+      label.append(checkbox, nameSpan);
       listsBox.appendChild(label);
     });
 
@@ -484,7 +467,7 @@ export const formView = {
       clearBtn: container.querySelector('#book-cover-clear'),
       preview: container.querySelector('#cover-preview'),
       initialUrl: book.cover_url,
-      onError: (texto) => mostrarMensagem(texto, 'erro')
+      onError: (text) => showFormMessage(text, 'error')
     });
 
     container.querySelector('#edit-book-cancel').addEventListener('click', () => {
@@ -499,11 +482,11 @@ export const formView = {
       // Evita envio duplicado enquanto processa.
       if (submitBtn.disabled) return;
 
-      const dados = lerTituloEPaginas(titleInput, pagesInput);
+      const parsed = readTitleAndPages(titleInput, pagesInput);
 
-      if (dados.erro) {
-        mostrarMensagem(dados.erro, 'erro');
-        dados.campo.focus();
+      if (parsed.error) {
+        showFormMessage(parsed.error, 'error');
+        parsed.field.focus();
         return;
       }
 
@@ -511,29 +494,26 @@ export const formView = {
         (checkbox) => checkbox.value
       );
 
-      submitBtn.disabled = true;
-      submitLabel.textContent = 'Salvando...';
-      mostrarMensagem('', 'sucesso');
+      showFormMessage('');
 
       try {
-        const atualizado = await bookService.updateBook({
-          book,
-          title: dados.titulo,
-          description: descriptionInput.value,
-          pagesCount: dados.paginas,
-          coverFile: picker.getFile(),
-          listIds
-        });
+        await withBusyButton(submitBtn, 'Salvando...', async () => {
+          const updatedBook = await bookService.updateBook({
+            book,
+            title: parsed.title,
+            description: descriptionInput.value,
+            pagesCount: parsed.pages,
+            coverFile: picker.getFile(),
+            listIds
+          });
 
-        if (typeof onSaved === 'function') {
-          await onSaved(atualizado);
-        }
+          if (typeof onSaved === 'function') {
+            await onSaved(updatedBook);
+          }
+        });
       } catch (error) {
         console.error('Erro ao editar livro:', error);
-        mostrarMensagem(error?.message || 'Não foi possível salvar as alterações.', 'erro');
-      } finally {
-        submitBtn.disabled = false;
-        submitLabel.textContent = 'Salvar alterações';
+        showFormMessage(error?.message || 'Não foi possível salvar as alterações.', 'error');
       }
     });
 

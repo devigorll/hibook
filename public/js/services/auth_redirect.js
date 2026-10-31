@@ -9,7 +9,7 @@
 export function readAuthRedirect(location = window.location) {
   const hash = new URLSearchParams((location.hash || '').replace(/^#/, ''));
   const query = new URLSearchParams(location.search || '');
-  const get = (chave) => hash.get(chave) ?? query.get(chave);
+  const get = (key) => hash.get(key) ?? query.get(key);
 
   const type = get('type');
   const error = get('error');
@@ -30,7 +30,7 @@ export function readAuthRedirect(location = window.location) {
 export function clearAuthErrorFromUrl(win = window) {
   const url = new URL(win.location.href);
 
-  ['error', 'error_code', 'error_description'].forEach((chave) => url.searchParams.delete(chave));
+  ['error', 'error_code', 'error_description'].forEach((key) => url.searchParams.delete(key));
 
   win.history.replaceState(win.history.state, '', `${url.pathname}${url.search}`);
 }
@@ -47,13 +47,13 @@ export function clearAuthErrorFromUrl(win = window) {
 //   'start-recovery'  mostrar a tela de nova senha (sem entrar no app)
 //   'handle'          tratar normalmente (entrar no app ou mostrar o login)
 //   'ignore'          nada a fazer (evento repetido, renovação de token ou troca de senha em andamento)
-export function decideAuthEvent(state, user, evento) {
+export function decideAuthEvent(state, user, authEvent) {
   const userId = user?.id ?? null;
   let { recoveryExpected, recoveryMode, lastUserId } = state;
 
   // Link de recuperação: o Supabase abre uma sessão temporária.
   // (Pode chegar como SIGNED_IN logo antes de PASSWORD_RECOVERY, ou só como INITIAL_SESSION.)
-  if (evento === 'PASSWORD_RECOVERY' || (recoveryExpected && user)) {
+  if (authEvent === 'PASSWORD_RECOVERY' || (recoveryExpected && user)) {
     return {
       action: recoveryMode ? 'ignore' : 'start-recovery',
       state: { recoveryExpected: false, recoveryMode: true, lastUserId: userId }
@@ -61,7 +61,7 @@ export function decideAuthEvent(state, user, evento) {
   }
 
   // O link de recuperação não gerou uma sessão válida: segue para o login normal.
-  if (recoveryExpected && !user && evento === 'INITIAL_SESSION') {
+  if (recoveryExpected && !user && authEvent === 'INITIAL_SESSION') {
     recoveryExpected = false;
   }
 

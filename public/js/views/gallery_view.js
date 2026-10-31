@@ -2,7 +2,7 @@
 // Não busca dados: quem busca é o app.js, usando o book_service.
 
 import { ratingView } from './rating_view.js';
-import { calcularProgresso } from './progress_view.js';
+import { calculateProgress } from './progress_view.js';
 
 export const galleryView = {
   renderLoading(container) {
@@ -54,11 +54,11 @@ export const galleryView = {
     const grid = document.createElement('div');
     grid.className = 'masonry';
 
-    books.forEach((book, indice) => {
+    books.forEach((book, index) => {
       const item = document.createElement('div');
       item.className = 'book-item';
       // Atraso escalonado da animação de entrada (limitado para não demorar em listas grandes).
-      item.style.setProperty('--i', String(Math.min(indice, 12)));
+      item.style.setProperty('--i', String(Math.min(index, 12)));
 
       const card = document.createElement('button');
       card.type = 'button';
@@ -93,18 +93,18 @@ export const galleryView = {
       cover.appendChild(img);
 
       // Barra fina de progresso na base da capa (só se o livro já foi iniciado e tem total).
-      const progresso = calcularProgresso(book.current_page, book.pages_count);
+      const progress = calculateProgress(book.current_page, book.pages_count);
 
-      if (progresso.temTotal && progresso.atual > 0) {
-        const barra = document.createElement('span');
-        barra.className = 'book-progress';
-        barra.setAttribute('aria-hidden', 'true');
+      if (progress.hasTotal && progress.current > 0) {
+        const progressBar = document.createElement('span');
+        progressBar.className = 'book-progress';
+        progressBar.setAttribute('aria-hidden', 'true');
 
-        const preenchimento = document.createElement('span');
-        preenchimento.style.width = `${progresso.fracao * 100}%`;
+        const fill = document.createElement('span');
+        fill.style.width = `${progress.fraction * 100}%`;
 
-        barra.appendChild(preenchimento);
-        cover.appendChild(barra);
+        progressBar.appendChild(fill);
+        cover.appendChild(progressBar);
       }
 
       const title = document.createElement('span');
@@ -115,9 +115,9 @@ export const galleryView = {
 
       // Estrelas só aparecem se o livro já foi avaliado (nota 0 também conta).
       if (book.rating !== null && book.rating !== undefined) {
-        const nota = ratingView.createReadOnly(book.rating);
-        nota.classList.add('book-rating');
-        card.appendChild(nota);
+        const ratingStars = ratingView.createReadOnly(book.rating);
+        ratingStars.classList.add('book-rating');
+        card.appendChild(ratingStars);
       }
 
       card.addEventListener('click', () => {

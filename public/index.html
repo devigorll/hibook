@@ -13,32 +13,8 @@
 
   <title>HiBook — Galeria Visual de Livros</title>
 
-  <!-- Aplica o tema ANTES da página ser desenhada, para não "piscar" entre claro e escuro.
-       Mesma regra do js/services/theme_service.js: escolha salva > tema do sistema. -->
-  <script>
-    (function () {
-      var tema = null;
-
-      try {
-        tema = localStorage.getItem('hibook-theme');
-      } catch (erro) {
-        tema = null;
-      }
-
-      if (tema !== 'light' && tema !== 'dark') {
-        var claro = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
-        tema = claro ? 'light' : 'dark';
-      }
-
-      document.documentElement.setAttribute('data-theme', tema);
-
-      var meta = document.querySelector('meta[name="theme-color"]');
-
-      if (meta) {
-        meta.setAttribute('content', tema === 'light' ? '#f6f6f7' : '#0a0a0c');
-      }
-    })();
-  </script>
+  <!-- Aplica o tema antes do primeiro desenho (evita piscar entre claro e escuro) -->
+  <script src="./js/theme_boot.js"></script>
 
   <link rel="stylesheet" href="./css/variables.css">
   <link rel="stylesheet" href="./css/global.css">

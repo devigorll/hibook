@@ -1,7 +1,9 @@
+import { setMessage, withBusyButton } from './ui_helpers.js';
+
 // Modais usando o elemento nativo <dialog>:
 // já vem com foco preso, fecha com ESC e escurece o fundo.
 
-export function criarDialog() {
+export function createDialog() {
   const dialog = document.createElement('dialog');
   dialog.className = 'modal';
   document.body.appendChild(dialog);
@@ -12,7 +14,7 @@ export const modalView = {
   // Pergunta de confirmação. Retorna true (confirmou) ou false (cancelou).
   confirm({ title, message, confirmText = 'Confirmar', cancelText = 'Cancelar', danger = false }) {
     return new Promise((resolve) => {
-      const dialog = criarDialog();
+      const dialog = createDialog();
 
       dialog.innerHTML = `
         <form method="dialog" class="modal-card">
@@ -31,16 +33,16 @@ export const modalView = {
       dialog.querySelector('[data-action="cancel"]').textContent = cancelText;
       dialog.querySelector('[data-action="confirm"]').textContent = confirmText;
 
-      let confirmado = false;
+      let confirmed = false;
 
       dialog.querySelector('[data-action="cancel"]').addEventListener('click', () => dialog.close());
       dialog.querySelector('form').addEventListener('submit', () => {
-        confirmado = true;
+        confirmed = true;
       });
 
       dialog.addEventListener('close', () => {
         dialog.remove();
-        resolve(confirmado);
+        resolve(confirmed);
       });
 
       dialog.showModal();
@@ -53,7 +55,7 @@ export const modalView = {
   // Retorna true se salvou, false se cancelou.
   editText({ title, label, initialValue = '', confirmText = 'Salvar', maxLength = 60, onSubmit }) {
     return new Promise((resolve) => {
-      const dialog = criarDialog();
+      const dialog = createDialog();
 
       dialog.innerHTML = `
         <form class="modal-card" novalidate>
@@ -84,12 +86,9 @@ export const modalView = {
       input.value = initialValue;
       input.maxLength = maxLength;
 
-      let salvou = false;
+      let saved = false;
 
-      function mostrarErro(texto) {
-        message.textContent = texto;
-        message.className = 'form-message error-text';
-      }
+      const showError = (text) => setMessage(message, text, 'error');
 
       dialog.querySelector('[data-action="cancel"]').addEventListener('click', () => dialog.close());
 
@@ -99,40 +98,40 @@ export const modalView = {
         // Evita envio duplicado.
         if (confirmBtn.disabled) return;
 
-        const valor = input.value.trim();
+        const value = input.value.trim();
 
-        if (!valor) {
-          mostrarErro('Informe um nome.');
+        if (!value) {
+          showError('Informe um nome.');
           input.focus();
           return;
         }
 
         // Sem mudança: apenas fecha.
-        if (valor === initialValue.trim()) {
+        if (value === initialValue.trim()) {
           dialog.close();
           return;
         }
 
-        confirmBtn.disabled = true;
-        message.textContent = '';
+        showError('');
 
         try {
-          if (typeof onSubmit === 'function') {
-            await onSubmit(valor);
-          }
+          await withBusyButton(confirmBtn, null, async () => {
+            if (typeof onSubmit === 'function') {
+              await onSubmit(value);
+            }
+          });
 
-          salvou = true;
+          saved = true;
           dialog.close();
         } catch (error) {
-          mostrarErro(error?.message || 'Não foi possível salvar.');
-          confirmBtn.disabled = false;
+          showError(error?.message || 'Não foi possível salvar.');
           input.focus();
         }
       });
 
       dialog.addEventListener('close', () => {
         dialog.remove();
-        resolve(salvou);
+        resolve(saved);
       });
 
       dialog.showModal();

@@ -1,12 +1,16 @@
 {
   "name": "hibook",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "HiBook — Galeria visual de livros inspirada no Pinterest",
-  "main": "public/app.js",
-  "scripts": {
-    "start": "npx serve public"
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18"
   },
-  "keywords": [],
-  "author": "",
+  "scripts": {
+    "build": "node scripts/generate-env.mjs",
+    "start": "npm run build && npx serve public",
+    "test": "node --test scripts/generate-env.test.mjs tests/services.test.mjs"
+  },
   "license": "ISC"
 }

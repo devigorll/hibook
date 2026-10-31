@@ -56,19 +56,18 @@ export const themeView = {
       return button;
     });
 
-    // Destaca o tema atual.
     function render(theme = getTheme()) {
       buttons.forEach((button) => {
-        const ativo = button.dataset.value === theme;
-        button.classList.toggle('is-active', ativo);
-        button.setAttribute('aria-checked', String(ativo));
+        const isActive = button.dataset.value === theme;
+        button.classList.toggle('is-active', isActive);
+        button.setAttribute('aria-checked', String(isActive));
       });
     }
 
-    const cancelar = onThemeChange((theme) => {
+    const unsubscribe = onThemeChange((theme) => {
       // Se este seletor saiu da página (troca de tela), para de ouvir.
       if (!root.isConnected) {
-        cancelar();
+        unsubscribe();
         return;
       }
 

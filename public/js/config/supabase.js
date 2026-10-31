@@ -1,20 +1,20 @@
-// Cliente Supabase (carregado via CDN em formato ES Module)
+// Cliente Supabase (único ponto de criação).
+//
+// URL e chave pública vêm de ./env.js, gerado por "npm run build" a partir do .env (local)
+// ou das variáveis de ambiente da Vercel (veja scripts/generate-env.mjs).
+// Depois de validar o app, fixe a versão do SDK (ex.: supabase-js@2.x.y/+esm).
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-// Project Settings > API. A publishable key é pública por design:
-// quem protege os dados são as políticas RLS no Supabase, não o segredo da chave.
-const SUPABASE_URL = 'https://rgjaybymwfxhqxwkdxxk.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable__gy6sQM1AxgeDtcw5LgnOA_5vgmg-DU';
+let config = null;
 
-// Avisa somente se as credenciais estiverem vazias ou com o texto de exemplo.
-const credenciaisValidas =
-  SUPABASE_URL.startsWith('https://') &&
-  !SUPABASE_URL.includes('SEU_PROJETO') &&
-  SUPABASE_ANON_KEY.length > 20 &&
-  !SUPABASE_ANON_KEY.includes('SUA_CHAVE');
-
-if (!credenciaisValidas) {
-  console.error('Configure SUPABASE_URL e SUPABASE_ANON_KEY em public/js/config/supabase.js');
+try {
+  config = await import('./env.js');
+} catch {
+  // arquivo ausente: tratado logo abaixo, com uma mensagem que diz o que fazer
 }
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+if (!config?.SUPABASE_URL || !config?.SUPABASE_PUBLISHABLE_KEY) {
+  throw new Error('Configuração do Supabase ausente. Rode "npm run build" para gerar js/config/env.js a partir do .env.');
+}
+
+export const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_PUBLISHABLE_KEY);

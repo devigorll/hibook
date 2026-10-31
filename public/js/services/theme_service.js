@@ -27,13 +27,11 @@ function systemTheme() {
   return systemQuery.matches ? 'light' : 'dark';
 }
 
-// Tema em uso agora.
 export function getTheme() {
   return readChoice() ?? systemTheme();
 }
 
-// true se o usuário já escolheu um tema manualmente.
-export function hasExplicitChoice() {
+function hasExplicitChoice() {
   return readChoice() !== null;
 }
 
@@ -59,7 +57,6 @@ function notify(theme) {
   listeners.forEach((callback) => callback(theme));
 }
 
-// Define o tema e guarda a escolha.
 export function setTheme(theme) {
   if (theme !== 'light' && theme !== 'dark') {
     throw new Error(`Tema inválido: ${theme}`);

@@ -1,5 +1,3 @@
-console.log('[HiBook] app.js iniciado');
-
 document.addEventListener('DOMContentLoaded', async () => {
   const sidebar = document.getElementById('sidebar');
   const mainContent = document.getElementById('main-content');
@@ -27,9 +25,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   let galleryView = null;
   let bookDetailsView = null;
   let noteService = null;
-  let modulosProntos = false;
+  let modulesReady = false;
 
-  // Estado da aplicação.
   let currentUser = null;
 
   // Fluxo de recuperação de senha (link enviado por e-mail).
@@ -50,19 +47,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     return viewToken;
   }
 
-  // Traduz erros técnicos em mensagens para o usuário.
-  function mensagemDeErro(error) {
-    if (error?.code === '23505') {
-      return 'Você já tem uma lista com esse nome.';
-    }
-
+  // Os serviços já devolvem mensagens prontas para o usuário.
+  function getErrorMessage(error) {
     return error?.message || 'Ocorreu um erro inesperado.';
   }
 
-  // ========================================
+  // ============================================================
   // PARTE 1: INTERFACE (não depende de rede)
-  // ========================================
-
+  // ============================================================
   function refreshIcons() {
     if (window.lucide?.createIcons) {
       window.lucide.createIcons();
@@ -78,12 +70,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       sidebar.classList.remove('collapsed');
       mainContent.classList.remove('expanded');
 
-      const aberto = sidebar.classList.contains('mobile-open');
+      const isOpen = sidebar.classList.contains('mobile-open');
 
-      toggleSidebarBtn?.setAttribute('aria-expanded', String(aberto));
+      toggleSidebarBtn?.setAttribute('aria-expanded', String(isOpen));
 
       // Com o menu aberto no celular, a página de trás não rola
-      document.body.classList.toggle('sidebar-open', aberto);
+      document.body.classList.toggle('sidebar-open', isOpen);
     } else {
       sidebar.classList.remove('mobile-open');
       document.body.classList.remove('sidebar-open');
@@ -113,7 +105,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Fechar o menu no celular: botão ✕, toque no fundo escuro ou tecla Esc.
-  function fecharMenuMobile() {
+  function dismissMobileMenu() {
     if (mobileQuery.matches && sidebar.classList.contains('mobile-open')) {
       sidebar.classList.remove('mobile-open');
       updateSidebarState();
@@ -121,12 +113,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  document.getElementById('sidebar-backdrop')?.addEventListener('click', fecharMenuMobile);
-  document.getElementById('sidebar-close-btn')?.addEventListener('click', fecharMenuMobile);
+  document.getElementById('sidebar-backdrop')?.addEventListener('click', dismissMobileMenu);
+  document.getElementById('sidebar-close-btn')?.addEventListener('click', dismissMobileMenu);
 
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
-      fecharMenuMobile();
+      dismissMobileMenu();
     }
   });
 
@@ -169,7 +161,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Mensagem simples na área principal (carregando, erro etc.).
-  function showMessage(icon, titulo, texto) {
+  function showMessage(icon, title, text) {
     contentArea.innerHTML = `
       <div class="empty-state">
         <i data-lucide="${icon}"></i>
@@ -179,24 +171,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     `;
 
     // textContent evita inserir HTML vindo de mensagens de erro.
-    contentArea.querySelector('h3').textContent = titulo;
-    contentArea.querySelector('p').textContent = texto;
+    contentArea.querySelector('h3').textContent = title;
+    contentArea.querySelector('p').textContent = text;
     refreshIcons();
   }
 
   // Aviso curto no topo da área principal (sucesso ou erro de uma ação).
-  function showNotice(texto, tipo = 'erro') {
-    let aviso = contentArea.querySelector('#notice');
+  function showNotice(text, tone = 'error') {
+    let noticeElement = contentArea.querySelector('#notice');
 
-    if (!aviso) {
-      aviso = document.createElement('p');
-      aviso.id = 'notice';
-      aviso.setAttribute('role', 'status');
-      contentArea.prepend(aviso);
+    if (!noticeElement) {
+      noticeElement = document.createElement('p');
+      noticeElement.id = 'notice';
+      noticeElement.setAttribute('role', 'status');
+      contentArea.prepend(noticeElement);
     }
 
-    aviso.textContent = texto;
-    aviso.className = `form-message ${tipo === 'erro' ? 'error-text' : 'success-text'}`;
+    noticeElement.textContent = text;
+    noticeElement.className = `form-message ${tone === 'error' ? 'error-text' : 'success-text'}`;
+  }
+
+  // Avisos para quando um módulo da tela não carregou (o detalhe técnico está no console).
+  function showUnavailable(what, file) {
+    showMessage('alert-circle', `Não foi possível abrir ${what}`, `Verifique o console (F12) e o arquivo ${file}.`);
+  }
+
+  function noticeUnavailable(what) {
+    showNotice(`Não foi possível abrir ${what}. Veja o console (F12).`);
   }
 
   function appendSidebarItem(text, icon = 'folder') {
@@ -221,10 +222,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     refreshIcons();
   }
 
-  // ========================================
+  // ============================================================
   // PARTE 2: LISTAS (sidebar, renomear, excluir)
-  // ========================================
-
+  // ============================================================
   async function loadSidebarLists() {
     if (!listService) {
       setSidebarMessage('Erro ao carregar listas', 'alert-circle');
@@ -266,33 +266,33 @@ document.addEventListener('DOMContentLoaded', async () => {
       markActiveList();
     } catch (error) {
       console.error('Erro ao carregar listas:', error);
-      setSidebarMessage(mensagemDeErro(error), 'alert-circle');
+      setSidebarMessage(getErrorMessage(error), 'alert-circle');
     }
   }
 
   async function renameList(list) {
     if (!modalView || !listService) {
-      showNotice('Não foi possível abrir a janela de edição. Veja o console (F12).');
+      noticeUnavailable('a janela de edição');
       return;
     }
 
-    const salvou = await modalView.editText({
+    const saved = await modalView.editText({
       title: 'Renomear lista',
       label: 'Novo nome',
       initialValue: list.name,
       confirmText: 'Salvar',
       maxLength: 60,
-      onSubmit: async (novoNome) => {
+      onSubmit: async (newName) => {
         try {
-          await listService.renameList(list.id, novoNome);
+          await listService.renameList(list.id, newName);
         } catch (error) {
           console.error('Erro ao renomear lista:', error);
-          throw new Error(mensagemDeErro(error));
+          throw new Error(getErrorMessage(error));
         }
       }
     });
 
-    if (!salvou) {
+    if (!saved) {
       return;
     }
 
@@ -302,11 +302,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function deleteList(list) {
     if (!modalView || !listService) {
-      showNotice('Não foi possível abrir a confirmação. Veja o console (F12).');
+      noticeUnavailable('a confirmação');
       return;
     }
 
-    const confirmou = await modalView.confirm({
+    const confirmed = await modalView.confirm({
       title: 'Excluir lista',
       message:
         `A lista "${list.name}" será excluída. ` +
@@ -315,7 +315,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       danger: true
     });
 
-    if (!confirmou) {
+    if (!confirmed) {
       return;
     }
 
@@ -325,17 +325,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       selectedListId = null;
       await loadSidebarLists();
       await openView('gallery');
-      showNotice(`Lista "${list.name}" excluída.`, 'sucesso');
+      showNotice(`Lista "${list.name}" excluída.`, 'success');
     } catch (error) {
       console.error('Erro ao excluir lista:', error);
-      showNotice(mensagemDeErro(error));
+      showNotice(getErrorMessage(error));
     }
   }
 
-  // ========================================
+  // ============================================================
   // PARTE 3: LIVROS (galeria, detalhes, editar, excluir)
-  // ========================================
-
+  // ============================================================
   // Busca os livros e desenha a galeria dentro do container.
   // listId = null traz todos; com listId, só os daquela lista.
   async function loadBooksInto(container, token, listId, emptyInfo) {
@@ -369,7 +368,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       console.error('Erro ao carregar livros:', error);
 
-      galleryView.renderError(container, mensagemDeErro(error), () =>
+      galleryView.renderError(container, getErrorMessage(error), () =>
         loadBooksInto(container, token, listId, emptyInfo)
       );
       refreshIcons();
@@ -378,29 +377,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function openBookDetails(book) {
     if (!bookDetailsView || !bookService) {
-      showNotice('Não foi possível abrir os detalhes. Veja o console (F12).');
+      noticeUnavailable('os detalhes');
       return;
     }
 
-    const nomesDasListas = (book.book_lists ?? [])
-      .map((vinculo) => listsCache.find((list) => list.id === vinculo.list_id)?.name)
+    const bookListNames = (book.book_lists ?? [])
+      .map((link) => listsCache.find((list) => list.id === link.list_id)?.name)
       .filter(Boolean);
 
     bookDetailsView.open({
       book,
-      listNames: nomesDasListas,
-      onRate: (livro, nota) => bookService.setRating(livro.id, nota),
-      onSaveProgress: (livro, pagina) => bookService.setCurrentPage(livro, pagina),
+      listNames: bookListNames,
+      onRate: (targetBook, rating) => bookService.setRating(targetBook.id, rating),
+      onSaveProgress: (targetBook, page) => bookService.setCurrentPage(targetBook, page),
       // Anotações por página (nulo se o módulo não carregou: a janela abre sem essa seção).
       notesApi: noteService
         ? {
-            list: (livro) => noteService.getNotes(livro.id),
-            create: (livro, dados) => noteService.createNote(livro, dados),
-            update: (livro, nota, dados) => noteService.updateNote(livro, nota, dados),
-            remove: (nota) => noteService.deleteNote(nota.id)
+            list: (targetBook) => noteService.getNotes(targetBook.id),
+            create: (targetBook, noteData) => noteService.createNote(targetBook, noteData),
+            update: (targetBook, note, noteData) => noteService.updateNote(targetBook, note, noteData),
+            remove: (note) => noteService.deleteNote(note.id)
           }
         : null,
-      confirmDelete: modalView ? (opcoes) => modalView.confirm(opcoes) : null,
+      confirmDelete: modalView ? (dialogOptions) => modalView.confirm(dialogOptions) : null,
       onEdit: showEditBook,
       onDelete: deleteBook,
       // Se a nota ou o progresso mudaram, a galeria é redesenhada com os dados novos.
@@ -426,11 +425,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     pageTitle.textContent = 'Editar Livro';
 
     if (!formView || typeof formView.renderEditBookForm !== 'function') {
-      showMessage(
-        'alert-circle',
-        'Não foi possível abrir o formulário',
-        'Verifique o console (F12) e o arquivo js/views/form_view.js.'
-      );
+      showUnavailable('o formulário', 'js/views/form_view.js');
       return;
     }
 
@@ -441,7 +436,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         onCancel: () => refreshCurrentView(),
         onSaved: async () => {
           await refreshCurrentView();
-          showNotice('Livro atualizado com sucesso!', 'sucesso');
+          showNotice('Livro atualizado com sucesso!', 'success');
         }
       });
 
@@ -454,18 +449,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function deleteBook(book) {
     if (!modalView || !bookService) {
-      showNotice('Não foi possível abrir a confirmação. Veja o console (F12).');
+      noticeUnavailable('a confirmação');
       return;
     }
 
-    const confirmou = await modalView.confirm({
+    const confirmed = await modalView.confirm({
       title: 'Excluir livro',
       message: `O livro "${book.title}" e a imagem da capa serão excluídos permanentemente.`,
       confirmText: 'Excluir',
       danger: true
     });
 
-    if (!confirmou) {
+    if (!confirmed) {
       return;
     }
 
@@ -473,21 +468,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       await bookService.deleteBook(book);
 
       await refreshCurrentView();
-      showNotice(`Livro "${book.title}" excluído.`, 'sucesso');
+      showNotice(`Livro "${book.title}" excluído.`, 'success');
     } catch (error) {
       console.error('Erro ao excluir livro:', error);
-      showNotice(mensagemDeErro(error));
+      showNotice(getErrorMessage(error));
     }
   }
 
-  // ========================================
+  // ============================================================
   // PARTE 4: TELAS E NAVEGAÇÃO
-  // ========================================
-
+  // ============================================================
   // Telas de autenticação ocupam a tela toda: sem menu lateral e sem cabeçalho.
-  function setAuthMode(ativo) {
-    document.body.classList.toggle('auth-mode', ativo);
-    contentArea.setAttribute('aria-live', ativo ? 'off' : 'polite');
+  function setAuthMode(isActive) {
+    document.body.classList.toggle('auth-mode', isActive);
+    contentArea.setAttribute('aria-live', isActive ? 'off' : 'polite');
   }
 
   // Encerra a tela neutra de carregamento inicial (sem menu) quando já se sabe quem está logado.
@@ -503,11 +497,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setActiveMenu(null);
 
     if (!authView) {
-      showMessage(
-        'alert-circle',
-        'Não foi possível abrir o login',
-        'Verifique o console (F12) e os arquivos em js/views e js/services.'
-      );
+      showUnavailable('o login', 'js/views/auth_view.js');
       return;
     }
 
@@ -592,11 +582,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     pageTitle.textContent = 'Criar Livro';
 
     if (!formView || typeof formView.renderCreateBookForm !== 'function') {
-      showMessage(
-        'alert-circle',
-        'Não foi possível abrir o formulário',
-        'Verifique o console (F12) e o arquivo js/views/form_view.js.'
-      );
+      showUnavailable('o formulário', 'js/views/form_view.js');
       return;
     }
 
@@ -624,11 +610,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     pageTitle.textContent = 'Criar Lista';
 
     if (!formView || typeof formView.renderCreateListForm !== 'function') {
-      showMessage(
-        'alert-circle',
-        'Não foi possível abrir o formulário',
-        'Verifique o console (F12) e o arquivo js/views/form_view.js.'
-      );
+      showUnavailable('o formulário', 'js/views/form_view.js');
       return;
     }
 
@@ -642,8 +624,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Verifica se já dá para navegar; senão mostra o aviso adequado.
-  function podeNavegar() {
-    if (!modulosProntos) {
+  function canNavigate() {
+    if (!modulesReady) {
       showMessage('loader', 'Conectando...', 'Aguarde um instante e tente novamente.');
       closeMobileMenu();
       return false;
@@ -660,25 +642,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Itens do menu principal (Início, Criar Livro, Criar Lista).
   function navigateTo(menuItem) {
-    if (!podeNavegar()) {
+    if (!canNavigate()) {
       return;
     }
 
     selectedListId = null;
 
-    let resultado;
+    let navigationResult;
 
     switch (menuItem.dataset.view) {
       case 'gallery':
-        resultado = showGallery();
+        navigationResult = showGallery();
         break;
 
       case 'create-book':
-        resultado = showCreateBook();
+        navigationResult = showCreateBook();
         break;
 
       case 'create-list':
-        resultado = showCreateList();
+        navigationResult = showCreateList();
         break;
 
       default:
@@ -689,12 +671,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     setActiveMenu(menuItem);
     closeMobileMenu();
 
-    return resultado;
+    return navigationResult;
   }
 
   // Itens da seção "Minhas Listas".
   function openList(listItem) {
-    if (!podeNavegar()) {
+    if (!canNavigate()) {
       return;
     }
 
@@ -758,35 +740,33 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateSidebarState();
   setSidebarMessage('Carregando...', 'loader');
   showMessage('loader', 'Conectando...', 'Carregando a biblioteca.');
-  console.log('[HiBook] interface pronta');
 
-  // ========================================
+  // ============================================================
   // PARTE 5: MÓDULOS E AUTENTICAÇÃO (rede)
-  // ========================================
-
+  // ============================================================
   // Falha com mensagem clara se o carregamento demorar demais.
-  function comTimeout(promise, ms, nome) {
+  function withTimeout(promise, ms, name) {
     let timer;
 
-    const limite = new Promise((_, reject) => {
+    const timeoutPromise = new Promise((_, reject) => {
       timer = setTimeout(
-        () => reject(new Error(`Tempo esgotado ao carregar ${nome}`)),
+        () => reject(new Error(`Tempo esgotado ao carregar ${name}`)),
         ms
       );
     });
 
-    return Promise.race([promise, limite]).finally(() => clearTimeout(timer));
+    return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timer));
   }
 
-  const falhas = [];
+  const loadFailures = [];
 
-  async function carregarModulo(caminho, nomeExport) {
+  async function loadModule(modulePath, exportName) {
     try {
-      const modulo = await comTimeout(import(caminho), 10000, caminho);
-      return modulo[nomeExport] ?? null;
+      const loadedModule = await withTimeout(import(modulePath), 10000, modulePath);
+      return loadedModule[exportName] ?? null;
     } catch (error) {
-      console.error(`Falha ao carregar ${caminho}:`, error);
-      falhas.push(`${caminho} → ${error?.message || error}`);
+      console.error(`Falha ao carregar ${modulePath}:`, error);
+      loadFailures.push(`${modulePath} → ${error?.message || error}`);
       return null;
     }
   }
@@ -847,52 +827,51 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Seletor de tema: usa só arquivos locais (sem rede), então aparece
   // mesmo se o Supabase demorar ou falhar.
-  async function montarSeletorDeTema() {
-    const destino = document.getElementById('header-actions');
-    const themeView = await carregarModulo('./js/views/theme_view.js', 'themeView');
+  async function mountThemeSwitch() {
+    const target = document.getElementById('header-actions');
+    const themeView = await loadModule('./js/views/theme_view.js', 'themeView');
 
-    if (destino && themeView) {
-      destino.appendChild(themeView.createSwitch());
+    if (target && themeView) {
+      target.appendChild(themeView.createSwitch());
     }
   }
 
-  montarSeletorDeTema();
+  mountThemeSwitch();
 
   // Descobre (antes de o Supabase carregar e limpar a URL) se a página foi aberta
   // por um link de recuperação de senha ou por um link inválido/expirado.
-  const lerRedirect = await carregarModulo('./js/services/auth_redirect.js', 'readAuthRedirect');
-  const limparErroDaUrl = await carregarModulo('./js/services/auth_redirect.js', 'clearAuthErrorFromUrl');
-  const decidirEventoDeAuth = await carregarModulo('./js/services/auth_redirect.js', 'decideAuthEvent');
-  const redirect = lerRedirect ? lerRedirect() : { isRecovery: false, hasError: false };
+  const readAuthRedirect = await loadModule('./js/services/auth_redirect.js', 'readAuthRedirect');
+  const clearAuthErrorFromUrl = await loadModule('./js/services/auth_redirect.js', 'clearAuthErrorFromUrl');
+  const decideAuthEvent = await loadModule('./js/services/auth_redirect.js', 'decideAuthEvent');
+  const authRedirect = readAuthRedirect ? readAuthRedirect() : { isRecovery: false, hasError: false };
 
-  if (redirect.isRecovery) {
+  if (authRedirect.isRecovery) {
     recoveryExpected = true;
   }
 
-  if (redirect.hasError) {
-    pendingLinkError = { code: redirect.errorCode, description: redirect.errorDescription };
+  if (authRedirect.hasError) {
+    pendingLinkError = { code: authRedirect.errorCode, description: authRedirect.errorDescription };
 
     // O link com erro não traz sessão: dá para limpar a URL para o aviso não voltar ao atualizar.
-    if (typeof limparErroDaUrl === 'function') {
-      limparErroDaUrl();
+    if (typeof clearAuthErrorFromUrl === 'function') {
+      clearAuthErrorFromUrl();
     }
   }
 
   [listService, bookService, noteService, authService, formView, authView, modalView, galleryView, bookDetailsView] =
     await Promise.all([
-      carregarModulo('./js/services/list_service.js', 'listService'),
-      carregarModulo('./js/services/book_service.js', 'bookService'),
-      carregarModulo('./js/services/note_service.js', 'noteService'),
-      carregarModulo('./js/services/auth_service.js', 'authService'),
-      carregarModulo('./js/views/form_view.js', 'formView'),
-      carregarModulo('./js/views/auth_view.js', 'authView'),
-      carregarModulo('./js/views/modal_view.js', 'modalView'),
-      carregarModulo('./js/views/gallery_view.js', 'galleryView'),
-      carregarModulo('./js/views/book_details_view.js', 'bookDetailsView')
+      loadModule('./js/services/list_service.js', 'listService'),
+      loadModule('./js/services/book_service.js', 'bookService'),
+      loadModule('./js/services/note_service.js', 'noteService'),
+      loadModule('./js/services/auth_service.js', 'authService'),
+      loadModule('./js/views/form_view.js', 'formView'),
+      loadModule('./js/views/auth_view.js', 'authView'),
+      loadModule('./js/views/modal_view.js', 'modalView'),
+      loadModule('./js/views/gallery_view.js', 'galleryView'),
+      loadModule('./js/views/book_details_view.js', 'bookDetailsView')
     ]);
 
-  modulosProntos = true;
-  console.log('[HiBook] módulos carregados', { falhas });
+  modulesReady = true;
 
   if (!authService) {
     endBoot();
@@ -901,24 +880,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     showMessage(
       'alert-circle',
       'Não foi possível conectar ao Supabase',
-      falhas[0] || 'Veja o console (F12) para mais detalhes.'
+      loadFailures[0] || 'Veja o console (F12) para mais detalhes.'
     );
     return;
   }
 
-  authService.onAuthChange((user, evento) => {
+  authService.onAuthChange((user, authEvent) => {
     // A regra de decisão fica em js/services/auth_redirect.js (testada à parte).
     // Sem ela, cai no comportamento simples: tratar todo evento novo de usuário.
-    const decisao = decidirEventoDeAuth
-      ? decidirEventoDeAuth({ recoveryExpected, recoveryMode, lastUserId }, user, evento)
+    const decision = decideAuthEvent
+      ? decideAuthEvent({ recoveryExpected, recoveryMode, lastUserId }, user, authEvent)
       : { action: 'handle', state: { recoveryExpected, recoveryMode, lastUserId: user?.id ?? null } };
 
-    ({ recoveryExpected, recoveryMode, lastUserId } = decisao.state);
+    ({ recoveryExpected, recoveryMode, lastUserId } = decision.state);
 
     // setTimeout evita chamar o Supabase de dentro do callback de autenticação.
-    if (decisao.action === 'start-recovery') {
+    if (decision.action === 'start-recovery') {
       setTimeout(startRecovery, 0);
-    } else if (decisao.action === 'handle') {
+    } else if (decision.action === 'handle') {
       setTimeout(() => handleUserChange(user), 0);
     }
   });

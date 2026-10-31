@@ -1,13 +1,20 @@
-# Ficheiros do sistema e do editor
+# Sistema e editor
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
 
-# Node modules (se instalares bibliotecas locais)
+# Dependências
 node_modules/
-npm-debug.log
+npm-debug.log*
 
-# Ambientes e credenciais sensíveis
+# Credenciais e ambiente: nunca versionar (o modelo .env.example é versionado)
 .env
-.env.local
+.env.*
+!.env.example
+
+# Gerado por "npm run build" a partir do .env / variáveis da Vercel
+public/js/config/env.js
+
+# Vercel
+.vercel/

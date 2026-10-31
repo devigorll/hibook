@@ -1,9 +1,10 @@
 import { authService, MIN_PASSWORD_LENGTH } from '../services/auth_service.js';
+import { setMessage, withBusyButton } from './ui_helpers.js';
 
-// ==========================================
+// ============================================================
 // Ícones (SVG próprios: não dependem de biblioteca nem de rede)
-// ==========================================
-const svg = (corpo) => `<svg viewBox="0 0 24 24" aria-hidden="true">${corpo}</svg>`;
+// ============================================================
+const svg = (body) => `<svg viewBox="0 0 24 24" aria-hidden="true">${body}</svg>`;
 
 const ICON_EYE = svg(
   '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>'
@@ -60,11 +61,11 @@ function passwordField(id, autocomplete) {
   `;
 }
 
-function emailValido(email) {
+function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-const COOLDOWN_SEGUNDOS = 60;
+const COOLDOWN_SECONDS = 60;
 
 export const authView = {
   // Desenha as telas de autenticação.
@@ -89,85 +90,64 @@ export const authView = {
       })
       .catch((error) => console.warn('Seletor de tema indisponível na tela de login:', error));
 
-    // ----- utilitários da tela -----
-    function pararCooldown() {
+    // --- utilitários da tela ---
+    function stopCooldown() {
       if (cooldownTimer) {
         clearInterval(cooldownTimer);
         cooldownTimer = null;
       }
     }
 
-    function ligarSenhas() {
-      card.querySelectorAll('.password-toggle').forEach((botao) => {
-        const campo = botao.parentElement.querySelector('input');
+    function wirePasswordToggles() {
+      card.querySelectorAll('.password-toggle').forEach((button) => {
+        const input = button.parentElement.querySelector('input');
 
-        botao.addEventListener('click', () => {
-          const visivel = campo.type === 'text';
+        button.addEventListener('click', () => {
+          const isVisible = input.type === 'text';
 
-          campo.type = visivel ? 'password' : 'text';
-          botao.innerHTML = visivel ? ICON_EYE : ICON_EYE_OFF;
-          botao.setAttribute('aria-label', visivel ? 'Mostrar senha' : 'Ocultar senha');
-          botao.setAttribute('aria-pressed', String(!visivel));
+          input.type = isVisible ? 'password' : 'text';
+          button.innerHTML = isVisible ? ICON_EYE : ICON_EYE_OFF;
+          button.setAttribute('aria-label', isVisible ? 'Mostrar senha' : 'Ocultar senha');
+          button.setAttribute('aria-pressed', String(!isVisible));
         });
       });
     }
 
     // Aviso no topo do cartão (success | error).
-    function alerta(tipo, texto) {
-      const elemento = card.querySelector('[data-field="notice"]');
+    function showAlert(tone, text) {
+      const element = card.querySelector('[data-field="notice"]');
 
-      if (!elemento) {
+      if (!element) {
         return;
       }
 
-      elemento.textContent = texto;
-      elemento.className = `auth-alert is-${tipo}`;
-      elemento.hidden = !texto;
+      element.textContent = text;
+      element.className = `auth-alert is-${tone}`;
+      element.hidden = !text;
     }
 
     // Mensagem de erro logo acima do botão.
-    function mensagem(texto) {
-      const elemento = card.querySelector('[data-field="message"]');
-
-      if (elemento) {
-        elemento.textContent = texto;
-        elemento.className = texto ? 'form-message error-text' : 'form-message';
-      }
+    function showFormError(text) {
+      setMessage(card.querySelector('[data-field="message"]'), text, 'error');
     }
 
-    // Desativa o botão e troca o texto enquanto a tarefa roda (evita envio duplicado).
-    async function comCarregamento(botao, textoCarregando, tarefa) {
-      const rotulo = botao.querySelector('span');
-      const original = rotulo.textContent;
+    function finishRender({ focus, email }) {
+      wirePasswordToggles();
 
-      botao.disabled = true;
-      rotulo.textContent = textoCarregando;
+      const emailField = card.querySelector('#auth-email');
 
-      try {
-        return await tarefa();
-      } finally {
-        botao.disabled = false;
-        rotulo.textContent = original;
-      }
-    }
-
-    function finalizar({ focar, email }) {
-      ligarSenhas();
-
-      const campoEmail = card.querySelector('#auth-email');
-
-      if (campoEmail && email) {
-        campoEmail.value = email;
+      if (emailField && email) {
+        emailField.value = email;
       }
 
-      if (focar) {
+      if (focus) {
         card.querySelector('input')?.focus();
       }
     }
 
-    // ==========================================
+    // ============================================================
     // Modo: login
-    // ==========================================
+    // ============================================================
     function renderLogin(extras = {}) {
       card.innerHTML = `
         <h1 class="auth-title">Entrar</h1>
@@ -200,51 +180,51 @@ export const authView = {
         </p>
       `;
 
-      finalizar(extras);
+      finishRender(extras);
 
       if (extras.notice) {
-        alerta('success', extras.notice);
+        showAlert('success', extras.notice);
       }
 
       const form = card.querySelector('form');
       const emailInput = card.querySelector('#auth-email');
-      const senhaInput = card.querySelector('#auth-password');
-      const botao = card.querySelector('button[type="submit"]');
+      const passwordInput = card.querySelector('#auth-password');
+      const button = card.querySelector('button[type="submit"]');
 
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
 
-        if (botao.disabled) return;
+        if (button.disabled) return;
 
         const email = emailInput.value.trim();
-        const senha = senhaInput.value;
+        const password = passwordInput.value;
 
-        if (!emailValido(email)) {
-          mensagem('Informe um e-mail válido.');
+        if (!isValidEmail(email)) {
+          showFormError('Informe um e-mail válido.');
           emailInput.focus();
           return;
         }
 
-        if (!senha) {
-          mensagem('Informe sua senha.');
-          senhaInput.focus();
+        if (!password) {
+          showFormError('Informe sua senha.');
+          passwordInput.focus();
           return;
         }
 
-        mensagem('');
+        showFormError('');
 
         try {
           // Se der certo, o app percebe o login (onAuthChange) e troca a tela.
-          await comCarregamento(botao, 'Entrando...', () => authService.signIn(email, senha));
+          await withBusyButton(button, 'Entrando...', () => authService.signIn(email, password));
         } catch (error) {
-          mensagem(error.message);
+          showFormError(error.message);
         }
       });
     }
 
-    // ==========================================
+    // ============================================================
     // Modo: cadastro
-    // ==========================================
+    // ============================================================
     function renderSignup(extras = {}) {
       card.innerHTML = `
         <h1 class="auth-title">Criar conta</h1>
@@ -275,55 +255,55 @@ export const authView = {
         </p>
       `;
 
-      finalizar(extras);
+      finishRender(extras);
 
       const form = card.querySelector('form');
       const emailInput = card.querySelector('#auth-email');
-      const senhaInput = card.querySelector('#auth-password');
-      const botao = card.querySelector('button[type="submit"]');
+      const passwordInput = card.querySelector('#auth-password');
+      const button = card.querySelector('button[type="submit"]');
 
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
 
-        if (botao.disabled) return;
+        if (button.disabled) return;
 
         const email = emailInput.value.trim();
-        const senha = senhaInput.value;
+        const password = passwordInput.value;
 
-        if (!emailValido(email)) {
-          mensagem('Informe um e-mail válido.');
+        if (!isValidEmail(email)) {
+          showFormError('Informe um e-mail válido.');
           emailInput.focus();
           return;
         }
 
-        if (senha.length < MIN_PASSWORD_LENGTH) {
-          mensagem(`A senha precisa ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`);
-          senhaInput.focus();
+        if (password.length < MIN_PASSWORD_LENGTH) {
+          showFormError(`A senha precisa ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`);
+          passwordInput.focus();
           return;
         }
 
-        mensagem('');
-        alerta('success', '');
+        showFormError('');
+        showAlert('success', '');
 
         try {
-          const dados = await comCarregamento(botao, 'Criando conta...', () => authService.signUp(email, senha));
+          const result = await withBusyButton(button, 'Criando conta...', () => authService.signUp(email, password));
 
           // Sem sessão = o Supabase está pedindo confirmação por e-mail.
-          if (!dados.session) {
-            alerta(
+          if (!result.session) {
+            showAlert(
               'success',
               'Conta criada! Enviamos um e-mail de confirmação. Abra o link para ativar a conta e depois faça login.'
             );
           }
         } catch (error) {
-          mensagem(error.message);
+          showFormError(error.message);
         }
       });
     }
 
-    // ==========================================
+    // ============================================================
     // Modo: esqueci minha senha
-    // ==========================================
+    // ============================================================
     function renderForgot(extras = {}) {
       card.innerHTML = `
         <h1 class="auth-title">Recuperar senha</h1>
@@ -347,70 +327,70 @@ export const authView = {
         <button type="button" class="link-btn auth-back" data-action="login">Voltar ao login</button>
       `;
 
-      finalizar(extras);
+      finishRender(extras);
 
       const form = card.querySelector('form');
       const emailInput = card.querySelector('#auth-email');
-      const botao = card.querySelector('button[type="submit"]');
-      const rotulo = botao.querySelector('span');
+      const button = card.querySelector('button[type="submit"]');
+      const label = button.querySelector('span');
 
       // Depois de enviar, espera 60 s antes de permitir outro envio (o Supabase limita a frequência).
-      function iniciarCooldown() {
-        let restante = COOLDOWN_SEGUNDOS;
+      function startCooldown() {
+        let secondsLeft = COOLDOWN_SECONDS;
 
-        botao.disabled = true;
-        rotulo.textContent = `Reenviar em ${restante}s`;
+        button.disabled = true;
+        label.textContent = `Reenviar em ${secondsLeft}s`;
 
         cooldownTimer = setInterval(() => {
-          restante -= 1;
+          secondsLeft -= 1;
 
-          if (restante <= 0) {
-            pararCooldown();
-            botao.disabled = false;
-            rotulo.textContent = 'Enviar novamente';
+          if (secondsLeft <= 0) {
+            stopCooldown();
+            button.disabled = false;
+            label.textContent = 'Enviar novamente';
             return;
           }
 
-          rotulo.textContent = `Reenviar em ${restante}s`;
+          label.textContent = `Reenviar em ${secondsLeft}s`;
         }, 1000);
       }
 
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
 
-        if (botao.disabled) return;
+        if (button.disabled) return;
 
         const email = emailInput.value.trim();
 
-        if (!emailValido(email)) {
-          mensagem('Informe um e-mail válido.');
+        if (!isValidEmail(email)) {
+          showFormError('Informe um e-mail válido.');
           emailInput.focus();
           return;
         }
 
-        mensagem('');
-        alerta('success', '');
+        showFormError('');
+        showAlert('success', '');
 
         try {
-          await comCarregamento(botao, 'Enviando...', () => authService.requestPasswordReset(email));
+          await withBusyButton(button, 'Enviando...', () => authService.requestPasswordReset(email));
 
           // Mesma resposta exista ou não uma conta com este e-mail (não revela quem tem cadastro).
-          alerta(
+          showAlert(
             'success',
             'Se existir uma conta com este e-mail, enviamos um link para redefinir a senha. ' +
               'Confira também a caixa de spam.'
           );
 
-          iniciarCooldown();
+          startCooldown();
         } catch (error) {
-          mensagem(error.message);
+          showFormError(error.message);
         }
       });
     }
 
-    // ==========================================
+    // ============================================================
     // Modo: definir nova senha (depois de abrir o link do e-mail)
-    // ==========================================
+    // ============================================================
     function renderReset(extras = {}) {
       card.innerHTML = `
         <h1 class="auth-title">Definir nova senha</h1>
@@ -436,37 +416,37 @@ export const authView = {
         <button type="button" class="link-btn auth-back" data-action="cancel-reset">Cancelar</button>
       `;
 
-      finalizar(extras);
+      finishRender(extras);
 
       const form = card.querySelector('form');
-      const novaInput = card.querySelector('#auth-new-password');
-      const confirmaInput = card.querySelector('#auth-confirm-password');
-      const botao = card.querySelector('button[type="submit"]');
+      const newPasswordInput = card.querySelector('#auth-new-password');
+      const confirmInput = card.querySelector('#auth-confirm-password');
+      const button = card.querySelector('button[type="submit"]');
 
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
 
-        if (botao.disabled) return;
+        if (button.disabled) return;
 
-        const nova = novaInput.value;
-        const confirmacao = confirmaInput.value;
+        const newPassword = newPasswordInput.value;
+        const confirmation = confirmInput.value;
 
-        if (nova.length < MIN_PASSWORD_LENGTH) {
-          mensagem(`A senha precisa ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`);
-          novaInput.focus();
+        if (newPassword.length < MIN_PASSWORD_LENGTH) {
+          showFormError(`A senha precisa ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`);
+          newPasswordInput.focus();
           return;
         }
 
-        if (nova !== confirmacao) {
-          mensagem('As senhas não coincidem.');
-          confirmaInput.focus();
+        if (newPassword !== confirmation) {
+          showFormError('As senhas não coincidem.');
+          confirmInput.focus();
           return;
         }
 
-        mensagem('');
+        showFormError('');
 
         try {
-          await comCarregamento(botao, 'Salvando...', () => authService.updatePassword(nova));
+          await withBusyButton(button, 'Salvando...', () => authService.updatePassword(newPassword));
 
           // Encerra a sessão temporária do link: o usuário entra de novo com a senha nova.
           try {
@@ -482,7 +462,7 @@ export const authView = {
             return;
           }
 
-          mensagem(error.message);
+          showFormError(error.message);
         }
       });
     }
@@ -500,9 +480,9 @@ export const authView = {
       `;
     }
 
-    // ==========================================
+    // ============================================================
     // Modo: link inválido, expirado ou já usado
-    // ==========================================
+    // ============================================================
     function renderLinkError() {
       card.innerHTML = `
         <div class="auth-result">
@@ -519,9 +499,9 @@ export const authView = {
       `;
     }
 
-    // ==========================================
+    // ============================================================
     // Navegação entre os modos
-    // ==========================================
+    // ============================================================
     const renderers = {
       login: renderLogin,
       signup: renderSignup,
@@ -529,53 +509,53 @@ export const authView = {
       reset: renderReset
     };
 
-    function mostrar(novoModo, extras = {}) {
-      pararCooldown();
-      (renderers[novoModo] ?? renderLogin)(extras);
+    function showMode(newMode, extras = {}) {
+      stopCooldown();
+      (renderers[newMode] ?? renderLogin)(extras);
     }
 
-    function finalizarRecuperacao(atualizada) {
+    function finishRecovery(updated) {
       if (typeof onRecoveryFinished === 'function') {
-        onRecoveryFinished({ updated: atualizada });
+        onRecoveryFinished({ updated: updated });
       } else {
-        mostrar('login', {
-          focar: true,
-          notice: atualizada ? 'Senha atualizada com sucesso. Entre com a nova senha.' : null
+        showMode('login', {
+          focus: true,
+          notice: updated ? 'Senha atualizada com sucesso. Entre com a nova senha.' : null
         });
       }
     }
 
     // Um único ouvinte para todos os botões de ação (o conteúdo do cartão muda, o cartão não).
     card.addEventListener('click', async (event) => {
-      const botao = event.target.closest('[data-action]');
+      const button = event.target.closest('[data-action]');
 
-      if (!botao) {
+      if (!button) {
         return;
       }
 
-      const acao = botao.dataset.action;
+      const action = button.dataset.action;
       const email = card.querySelector('#auth-email')?.value.trim() ?? '';
 
-      if (acao === 'login' || acao === 'signup' || acao === 'forgot') {
-        mostrar(acao, { email, focar: true });
-      } else if (acao === 'cancel-reset') {
+      if (action === 'login' || action === 'signup' || action === 'forgot') {
+        showMode(action, { email, focus: true });
+      } else if (action === 'cancel-reset') {
         try {
           await authService.signOut();
         } catch (error) {
           console.warn('Não foi possível encerrar a sessão temporária:', error);
         }
 
-        finalizarRecuperacao(false);
-      } else if (acao === 'finish') {
-        finalizarRecuperacao(true);
+        finishRecovery(false);
+      } else if (action === 'finish') {
+        finishRecovery(true);
       }
     });
 
-    // ----- tela inicial -----
+    // --- tela inicial ---
     if (linkError) {
       renderLinkError();
     } else {
-      mostrar(mode, { notice });
+      showMode(mode, { notice });
     }
   }
 };
