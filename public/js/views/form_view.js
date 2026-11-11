@@ -1,6 +1,7 @@
 import { listService } from '../services/list_service.js';
 import { bookService } from '../services/book_service.js';
 import { setMessage, withBusyButton } from './ui_helpers.js';
+import { bookSearchService } from '../services/book_search_service.js';
 
 // ============================================================
 // Funções auxiliares (usadas pelos formulários de livro)
@@ -186,12 +187,12 @@ export const formView = {
   // lists: listas do usuário (campo "Lista")
   // onCreated(book): chamado após salvar
   // ============================================================
-  renderCreateBookForm(container, { lists = [], onCreated } = {}) {
+  renderCreateBookForm(container, { lists = [], onCreated, prefill = null, onBack = null } = {}) {
     container.innerHTML = `
       <div class="form-card">
-        <h3>Novo livro</h3>
+        <h3>${prefill ? 'Revise os dados do livro' : 'Novo livro'}</h3>
         <p class="form-subtitle">
-          Cadastre um livro com a capa e, se quiser, associe a uma lista.
+          ${prefill ? 'Os dados foram importados automaticamente. Confira, edite o que quiser e salve.' : 'Cadastre um livro com a capa e, se quiser, associe a uma lista.'}
         </p>
 
         <form id="create-book-form" novalidate>
@@ -235,6 +236,19 @@ export const formView = {
             <input type="number" id="book-pages" min="1" step="1" inputmode="numeric">
           </div>
 
+          ${prefill ? `
+          <fieldset class="bs-fieldset">
+            <legend>Dados da edição</legend>
+            <div class="input-group"><label for="book-authors">Autor(es)</label><input type="text" id="book-authors" maxlength="300"></div>
+            <div class="bs-fields-grid">
+              <div class="input-group"><label for="book-publisher">Editora</label><input type="text" id="book-publisher" maxlength="200"></div>
+              <div class="input-group"><label for="book-year">Ano de publicação</label><input type="number" id="book-year" min="1000" max="2100" step="1" inputmode="numeric"></div>
+              <div class="input-group"><label for="book-language">Idioma</label><input type="text" id="book-language" maxlength="20"></div>
+              <div class="input-group"><label for="book-categories">Categorias (separe por vírgula)</label><input type="text" id="book-categories" maxlength="300"></div>
+              <div class="input-group"><label for="book-isbn13">ISBN-13</label><input type="text" id="book-isbn13" maxlength="17" inputmode="numeric"></div>
+              <div class="input-group"><label for="book-isbn10">ISBN-10</label><input type="text" id="book-isbn10" maxlength="13"></div>
+            </div>
+          </fieldset>` : ''}
           <div class="input-group">
             <label for="book-list">Lista</label>
             <select id="book-list">
@@ -245,6 +259,7 @@ export const formView = {
           <p class="form-message" id="create-book-message" role="status"></p>
 
           <div class="form-actions">
+            ${onBack ? '<button type="button" class="btn btn-outline" id="create-book-back"><i data-lucide="arrow-left" aria-hidden="true"></i><span>Voltar à busca</span></button>' : ''}
             <button type="submit" class="btn btn-primary" id="create-book-submit">
               <i data-lucide="save" aria-hidden="true"></i>
               <span>Salvar livro</span>
@@ -280,6 +295,58 @@ export const formView = {
       onError: (text) => showFormMessage(text, 'error')
     });
 
+    // --- Importação de uma edição escolhida na busca ---
+    let duplicateAck = false;
+    const edition = {
+      field: (id) => container.querySelector(id),
+      read() {
+        return {
+          authors: this.field('#book-authors').value,
+          publisher: this.field('#book-publisher').value,
+          published_year: this.field('#book-year').value,
+          language: this.field('#book-language').value,
+          isbn_10: this.field('#book-isbn10').value,
+          isbn_13: this.field('#book-isbn13').value,
+          categories: this.field('#book-categories').value.split(',').map((c) => c.trim()),
+          source: prefill.sources?.[0] ?? null,
+          source_id: String(prefill.id ?? '').split(':')[1] ?? null
+        };
+      }
+    };
+    if (onBack) {
+      container.querySelector('#create-book-back').addEventListener('click', onBack);
+    }
+    if (prefill) {
+      const cut = (text, max) => (text.length <= max ? text : `${text.slice(0, max - 1).replace(/\s+\S*$/, '')}…`);
+      titleInput.value = cut(prefill.title ?? '', 200);
+      descriptionInput.value = cut(prefill.description ?? '', 2000);
+      pagesInput.value = prefill.pages ?? '';
+      edition.field('#book-authors').value = (prefill.authors ?? []).join(', ');
+      edition.field('#book-publisher').value = prefill.publisher ?? '';
+      edition.field('#book-year').value = prefill.year ?? '';
+      edition.field('#book-language').value = prefill.language ?? '';
+      edition.field('#book-isbn13').value = prefill.isbn13 ?? '';
+      edition.field('#book-isbn10').value = prefill.isbn10 ?? '';
+      edition.field('#book-categories').value = (prefill.categories ?? []).join(', ');
+      if (prefill.coverUrl) {
+        // Baixa a capa pelo servidor e a coloca no seletor: o envio ao Storage segue o fluxo normal.
+        submitBtn.disabled = true;
+        showFormMessage('Importando a capa…');
+        bookSearchService.importCover(prefill.coverUrl)
+          .then((file) => {
+            const transfer = new DataTransfer();
+            transfer.items.add(file);
+            container.querySelector('#book-cover').files = transfer.files;
+            container.querySelector('#book-cover').dispatchEvent(new Event('change'));
+            showFormMessage('');
+          })
+          .catch(() => showFormMessage('Não foi possível importar a capa automaticamente. Envie uma imagem manualmente.', 'error'))
+          .finally(() => { submitBtn.disabled = false; });
+      } else {
+        showFormMessage('Esta edição não tem capa disponível. Envie uma imagem manualmente.');
+      }
+    }
+    form.addEventListener('input', () => { duplicateAck = false; });
     // Confere se a URL pública da capa abre (testa se o bucket está público).
     function verifyPublicCover(url, title) {
       const img = new Image();
@@ -318,11 +385,29 @@ export const formView = {
         return;
       }
 
+      let metadata = null;
+      if (prefill) {
+        try {
+          metadata = bookService.cleanMetadata(edition.read());
+        } catch (error) {
+          showFormMessage(error.message, 'error');
+          return;
+        }
+        if (!duplicateAck) {
+          const duplicates = await bookService.findDuplicates({ ...metadata, title: parsed.title });
+          if (duplicates.length) {
+            duplicateAck = true;
+            showFormMessage(`Você já tem "${duplicates[0].title}" na biblioteca (mesma edição). Para cadastrar mesmo assim, clique em "Salvar livro" novamente.`, 'error');
+            return;
+          }
+        }
+      }
       showFormMessage('');
 
       try {
         await withBusyButton(submitBtn, 'Salvando...', async () => {
           const book = await bookService.createBook({
+            metadata,
             title: parsed.title,
             description: descriptionInput.value,
             pagesCount: parsed.pages,

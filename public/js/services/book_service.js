@@ -205,9 +205,77 @@ async function updateFields(bookId, fields) {
 }
 
 // ============================================================
+// Metadados da edição (busca na internet) e duplicidade
+// ============================================================
+const isIsbn10 = (s) => /^\d{9}[\dX]$/.test(s) && [...s].reduce((sum, c, i) => sum + (c === 'X' ? 10 : Number(c)) * (10 - i), 0) % 11 === 0;
+const isIsbn13 = (s) => /^\d{13}$/.test(s) && [...s].reduce((sum, c, i) => sum + Number(c) * (i % 2 ? 3 : 1), 0) % 10 === 0;
+const cleanIsbn = (s) => String(s ?? '').replace(/[^0-9Xx]/g, '').toUpperCase();
+const normText = (s) => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+// Valida e normaliza os campos extras. Campo vazio vira null (nada é inventado).
+function cleanMetadata(raw = {}) {
+  const text = (v, max, name) => {
+    const t = String(v ?? '').trim();
+    if (t.length > max) throw new Error(`${name} pode ter no máximo ${max} caracteres.`);
+    return t || null;
+  };
+  const isbn10 = cleanIsbn(raw.isbn_10) || null;
+  const isbn13 = cleanIsbn(raw.isbn_13) || null;
+  if (isbn10 && !isIsbn10(isbn10)) throw new Error('ISBN-10 inválido. Confira os dígitos ou deixe o campo vazio.');
+  if (isbn13 && !isIsbn13(isbn13)) throw new Error('ISBN-13 inválido. Confira os dígitos ou deixe o campo vazio.');
+  let year = null;
+  if (String(raw.published_year ?? '').trim() !== '') {
+    year = Number(raw.published_year);
+    if (!Number.isInteger(year) || year < 1000 || year > 2100) throw new Error('Ano de publicação inválido.');
+  }
+  const categories = [...new Set((Array.isArray(raw.categories) ? raw.categories : []).map((c) => String(c).trim().slice(0, 60)).filter(Boolean))].slice(0, 10);
+  return {
+    authors: text(raw.authors, 300, 'O campo autor'),
+    publisher: text(raw.publisher, 200, 'A editora'),
+    published_year: year,
+    language: text(raw.language, 20, 'O idioma'),
+    isbn_10: isbn10,
+    isbn_13: isbn13,
+    categories: categories.length ? categories : null,
+    source: ['google', 'openlibrary'].includes(raw.source) ? raw.source : null,
+    source_id: text(raw.source_id, 100, 'O identificador da fonte')
+  };
+}
+
+// Procura livros do usuário que parecem ser a mesma edição. Nunca bloqueia: a tela só avisa.
+// ISBN igual = mesma edição. Sem ISBN dos dois lados: mesmo título e, quando conhecidos, mesma editora e ano.
+async function findDuplicates({ title, isbn_10, isbn_13, publisher, published_year }) {
+  try {
+    const found = new Map();
+    const filters = [isbn_13 && `isbn_13.eq.${isbn_13}`, isbn_10 && `isbn_10.eq.${isbn_10}`].filter(Boolean);
+    if (filters.length) {
+      const { data, error } = await supabase.from('books').select('id,title,publisher,published_year').or(filters.join(','));
+      if (error) throw error;
+      (data ?? []).forEach((b) => found.set(b.id, b));
+    }
+    const cleanTitle = String(title ?? '').trim();
+    if (cleanTitle) {
+      const { data, error } = await supabase.from('books').select('id,title,publisher,published_year,isbn_10,isbn_13').ilike('title', cleanTitle.replace(/[\\%_]/g, (m) => `\\${m}`));
+      if (error) throw error;
+      (data ?? []).forEach((b) => {
+        const bothHaveIsbn = (b.isbn_10 || b.isbn_13) && (isbn_10 || isbn_13);
+        const conflict = (publisher && b.publisher && normText(publisher) !== normText(b.publisher)) || (published_year && b.published_year && Number(published_year) !== b.published_year);
+        if (!bothHaveIsbn && !conflict) found.set(b.id, b);
+      });
+    }
+    return [...found.values()];
+  } catch (error) {
+    console.warn('Verificação de duplicidade indisponível (a migration de metadados foi aplicada?):', error);
+    return [];
+  }
+}
+
+// ============================================================
 // Serviço
 // ============================================================
 export const bookService = {
+  cleanMetadata,
+  findDuplicates,
   validateCover,
 
   // Busca os livros do usuário (mais recentes primeiro).
@@ -253,7 +321,7 @@ export const bookService = {
 
   // Cadastra um livro em 3 passos: envia a capa, salva o livro e vincula à lista.
   // Se um passo falhar, desfaz os anteriores para não deixar sobras.
-  async createBook({ title, description, pagesCount, coverFile, listId }) {
+  async createBook({ title, description, pagesCount, coverFile, listId, metadata = null }) {
     const { cleanTitle, cleanDescription, totalPages } = validateBookData({ title, description, pagesCount });
 
     const coverError = validateCover(coverFile);
@@ -274,7 +342,8 @@ export const bookService = {
         description: cleanDescription,
         pages_count: totalPages,
         cover_path: cover.path,
-        cover_url: cover.url
+        cover_url: cover.url,
+        ...(metadata ? cleanMetadata(metadata) : {})
       })
       .select()
       .single();

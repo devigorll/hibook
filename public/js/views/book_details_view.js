@@ -221,6 +221,11 @@ export const bookDetailsView = {
         .catch((error) => console.error('Não foi possível carregar as anotações:', error));
     }
 
+    // --- Resenhas externas (carregadas à parte; a busca só roda quando o usuário clica) ---
+    import('./reviews_view.js')
+      .then(({ reviewsView }) => area.appendChild(reviewsView.createSection({ book }).element))
+      .catch((error) => console.error('Não foi possível carregar as resenhas:', error));
+
     // --- Botões ---
     dialog.querySelector('[data-action="close"]').addEventListener('click', () => dialog.close());
 

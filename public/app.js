@@ -597,8 +597,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     try {
-      formView.renderCreateBookForm(contentArea, { lists: listsCache });
-      refreshIcons();
+      // Busca na internet (principal) ou cadastro manual. Se o módulo de busca falhar, o formulário manual abre normalmente.
+      const openForm = (prefill = null, onBack = null) => {
+        formView.renderCreateBookForm(contentArea, { lists: listsCache, prefill, onBack });
+        refreshIcons();
+      };
+      let searchView = null;
+      try {
+        ({ bookSearchView: searchView } = await import('./js/views/book_search_view.js'));
+      } catch (error) {
+        console.error('Busca de livros indisponível:', error);
+      }
+      if (token !== viewToken) {
+        return;
+      }
+      if (searchView) {
+        searchView.renderChooser(contentArea, { onManual: () => openForm(), onSelect: (edition, back) => openForm(edition, back) });
+        refreshIcons();
+      } else {
+        openForm();
+      }
     } catch (error) {
       console.error('Erro ao renderizar o formulário de livro:', error);
       showMessage('alert-circle', 'Erro ao abrir o formulário', error?.message || 'Veja o console (F12).');
