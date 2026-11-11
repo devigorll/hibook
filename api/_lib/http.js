@@ -18,7 +18,7 @@ export async function requireUser(req) {
   return r.ok ? r.json() : null;
 }
 
-export async function fetchJson(url, { headers = {}, timeout = 8000 } = {}) {
+export async function fetchJson(url, { headers = {}, timeout = 6000 } = {}) {
   const r = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json', ...headers }, signal: AbortSignal.timeout(timeout) });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();

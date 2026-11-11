@@ -18,3 +18,5 @@ public/js/config/env.js
 
 # Vercel
 .vercel/
+.vercel
+.env*

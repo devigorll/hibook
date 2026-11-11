@@ -11,17 +11,18 @@ const mainTitle = (t) => norm(String(t).split(/[:(–—-]/)[0]);
 const hasTitle = (text, title) => { const m = mainTitle(title); return m.length > 1 && ` ${norm(text)} `.includes(` ${m} `); };
 
 async function wikipedia(title, author) {
-  const out = [];
-  for (const lang of ['pt', 'en']) {
+  const results = await Promise.all(['pt', 'en'].map(async (lang) => {
+    const out = [];
     const p = new URLSearchParams({ action: 'query', format: 'json', generator: 'search', gsrsearch: `${title} ${author}`.trim(), gsrlimit: '3', prop: 'extracts|info', exintro: '1', explaintext: '1', exchars: '300', inprop: 'url', redirects: '1' });
-    const d = await fetchJson(`https://${lang}.wikipedia.org/w/api.php?${p}`, { timeout: 6000 }).catch(() => null);
+    const d = await fetchJson(`https://${lang}.wikipedia.org/w/api.php?${p}`, { timeout: 5000 }).catch(() => null);
     const last = norm(author).split(' ').pop();
     for (const pg of Object.values(d?.query?.pages || {})) {
       if (!hasTitle(pg.title, title) || (last && !norm(pg.extract).includes(last))) continue;
       out.push({ type: 'article', title: pg.title, source: `Wikipédia (${lang})`, description: short(pg.extract, 220), url: pg.fullurl });
     }
-  }
-  return out.slice(0, 2);
+    return out;
+  }));
+  return results.flat().slice(0, 2);
 }
 
 async function youtube(title, author) {

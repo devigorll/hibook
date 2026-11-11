@@ -10,7 +10,7 @@
   "scripts": {
     "build": "node scripts/generate-env.mjs",
     "start": "npm run build && npx serve public",
-    "dev": "npm run build && npx vercel dev",
+    "local": "npm run build && npx vercel dev",
     "test": "node --test scripts/generate-env.test.mjs tests/search_api.test.mjs"
   },
   "license": "ISC"

@@ -13,12 +13,12 @@ async function searchGoogle(q, isbn, page) {
 
 async function searchOpenLibrary(q, isbn, page) {
   const p = new URLSearchParams({ q: isbn ? `isbn:${isbn}` : q, limit: String(OL_WORKS), page: String(page + 1), fields: 'key,title,author_name,first_publish_year,cover_i,subject' });
-  const d = await fetchJson(`https://openlibrary.org/search.json?${p}`);
+  const d = await fetchJson(`https://openlibrary.org/search.json?${p}`, { timeout: 5000 });
   const docs = d.docs || [];
   const lists = await Promise.all(docs.map(async (doc, i) => {
     if (i >= OL_WITH_EDITIONS) return [normalizeOpenLibraryWork(doc)];
     try {
-      const e = await fetchJson(`https://openlibrary.org${doc.key}/editions.json?limit=${OL_EDITIONS}`, { timeout: 6000 });
+      const e = await fetchJson(`https://openlibrary.org${doc.key}/editions.json?limit=${OL_EDITIONS}`, { timeout: 4000 });
       let eds = (e.entries || []).map((x) => normalizeOpenLibraryEdition(x, doc)).filter(Boolean);
       if (isbn) eds = eds.filter((x) => [x.isbn13, x.isbn10, x.isbn10 && isbn10to13(x.isbn10)].includes(isbn));
       return eds.length ? eds : [normalizeOpenLibraryWork(doc)];
